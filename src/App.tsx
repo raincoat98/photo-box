@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import Webcam from "react-webcam";
 import { Camera, Download, RefreshCcw, Layout } from "lucide-react";
 import * as htmlToImage from "html-to-image";
@@ -36,6 +36,8 @@ function App() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [selectedBackground, setSelectedBackground] = useState(backgrounds[0]);
   const [selectedTemplate, setSelectedTemplate] = useState(templates[0]);
+  const [timer, setTimer] = useState<number | null>(null);
+  const [timerEnabled, setTimerEnabled] = useState(true);
   const webcamRef = useRef<Webcam>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
@@ -48,8 +50,34 @@ function App() {
     }
   }, [photos, selectedTemplate.maxPhotos]);
 
+  const startTimer = useCallback(() => {
+    if (photos.length >= selectedTemplate.maxPhotos) return;
+    if (timerEnabled) {
+      setTimer(3);
+    } else {
+      capture();
+    }
+  }, [photos.length, selectedTemplate.maxPhotos, timerEnabled, capture]);
+
+  useEffect(() => {
+    if (timer === null) return;
+
+    if (timer === 0) {
+      capture();
+      setTimer(null);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setTimer(timer - 1);
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [timer, capture]);
+
   const resetPhotos = () => {
     setPhotos([]);
+    setTimer(null);
   };
 
   const downloadResult = useCallback(() => {
@@ -73,11 +101,22 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-center mb-8">Photo Booth</h1>
+        <h1 className="text-3xl font-bold text-center mb-8">포토 부스</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Camera Section */}
           <div className="bg-white p-6 rounded-lg shadow-lg">
+            <div className="mb-4 flex justify-center">
+              <label className="text-sm bg-gray-100 px-4 py-2 rounded-full">
+                <input
+                  type="checkbox"
+                  checked={timerEnabled}
+                  onChange={(e) => setTimerEnabled(e.target.checked)}
+                  className="mr-2"
+                />
+                타이머 사용
+              </label>
+            </div>
             <div className="relative">
               <Webcam
                 audio={false}
@@ -90,14 +129,24 @@ function App() {
                   facingMode: "user",
                 }}
               />
-              <button
-                onClick={capture}
-                disabled={photos.length >= selectedTemplate.maxPhotos}
-                className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white text-black px-6 py-2 rounded-full shadow-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <Camera size={20} /> Capture ({photos.length}/
-                {selectedTemplate.maxPhotos})
-              </button>
+              {timer !== null && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                  <span className="text-white text-7xl font-bold">{timer}</span>
+                </div>
+              )}
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2">
+                <button
+                  onClick={startTimer}
+                  disabled={
+                    photos.length >= selectedTemplate.maxPhotos ||
+                    timer !== null
+                  }
+                  className="bg-white text-black px-6 py-2 rounded-full shadow-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  <Camera size={20} /> 촬영 ({photos.length}/
+                  {selectedTemplate.maxPhotos})
+                </button>
+              </div>
             </div>
           </div>
 
@@ -127,7 +176,7 @@ function App() {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400">
-                        Photo {index + 1}
+                        사진 {index + 1}
                       </div>
                     )}
                   </div>
@@ -140,14 +189,14 @@ function App() {
                 onClick={resetPhotos}
                 className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 flex items-center justify-center gap-2"
               >
-                <RefreshCcw size={20} /> Reset
+                <RefreshCcw size={20} /> 초기화
               </button>
               <button
                 onClick={downloadResult}
                 disabled={photos.length < selectedTemplate.maxPhotos}
                 className="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                <Download size={20} /> Download
+                <Download size={20} /> 다운로드
               </button>
             </div>
           </div>
@@ -157,7 +206,7 @@ function App() {
         <div className="mt-8 bg-white p-6 rounded-lg shadow-lg">
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
             <Layout size={24} />
-            Select Template
+            템플릿 선택
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {templates.map((template) => (
@@ -194,7 +243,7 @@ function App() {
 
         {/* Background Selection */}
         <div className="mt-8 bg-white p-6 rounded-lg shadow-lg">
-          <h2 className="text-xl font-semibold mb-4">Select Background</h2>
+          <h2 className="text-xl font-semibold mb-4">배경 선택</h2>
           <div className="grid grid-cols-3 gap-4">
             {backgrounds.map((bg, index) => (
               <button
