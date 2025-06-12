@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import Webcam from "react-webcam";
-import { Camera, Download, RefreshCcw, Layout } from "lucide-react";
+import { Camera, Download, RefreshCcw, Layout, Timer } from "lucide-react";
 import * as htmlToImage from "html-to-image";
 
 const backgrounds = [
@@ -37,7 +37,8 @@ function App() {
   const [selectedBackground, setSelectedBackground] = useState(backgrounds[0]);
   const [selectedTemplate, setSelectedTemplate] = useState(templates[0]);
   const [timer, setTimer] = useState<number | null>(null);
-  const [timerEnabled, setTimerEnabled] = useState(true);
+  const [continuousMode, setContinuousMode] = useState(false);
+  const [continuousInterval, setContinuousInterval] = useState(3);
   const webcamRef = useRef<Webcam>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
@@ -52,12 +53,8 @@ function App() {
 
   const startTimer = useCallback(() => {
     if (photos.length >= selectedTemplate.maxPhotos) return;
-    if (timerEnabled) {
-      setTimer(3);
-    } else {
-      capture();
-    }
-  }, [photos.length, selectedTemplate.maxPhotos, timerEnabled, capture]);
+    setTimer(continuousInterval);
+  }, [photos.length, selectedTemplate.maxPhotos, continuousInterval]);
 
   useEffect(() => {
     if (timer === null) return;
@@ -65,6 +62,13 @@ function App() {
     if (timer === 0) {
       capture();
       setTimer(null);
+
+      // 연속 촬영 모드일 경우 다음 촬영 준비
+      if (continuousMode && photos.length < selectedTemplate.maxPhotos - 1) {
+        setTimeout(() => {
+          setTimer(continuousInterval);
+        }, 1000);
+      }
       return;
     }
 
@@ -73,7 +77,14 @@ function App() {
     }, 1000);
 
     return () => clearTimeout(timeoutId);
-  }, [timer, capture]);
+  }, [
+    timer,
+    capture,
+    continuousMode,
+    photos.length,
+    selectedTemplate.maxPhotos,
+    continuousInterval,
+  ]);
 
   const resetPhotos = () => {
     setPhotos([]);
@@ -106,16 +117,34 @@ function App() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Camera Section */}
           <div className="bg-white p-6 rounded-lg shadow-lg">
-            <div className="mb-4 flex justify-center">
-              <label className="text-sm bg-gray-100 px-4 py-2 rounded-full">
-                <input
-                  type="checkbox"
-                  checked={timerEnabled}
-                  onChange={(e) => setTimerEnabled(e.target.checked)}
-                  className="mr-2"
-                />
-                타이머 사용
-              </label>
+            <div className="mb-4 flex flex-wrap justify-center gap-4">
+              <button
+                onClick={() => setContinuousMode(!continuousMode)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
+                  continuousMode
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                <Camera size={18} />
+                연속 촬영
+              </button>
+              {continuousMode && (
+                <div className="flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-full">
+                  <Timer size={16} />
+                  <select
+                    value={continuousInterval}
+                    onChange={(e) =>
+                      setContinuousInterval(Number(e.target.value))
+                    }
+                    className="bg-transparent border-none focus:ring-0 text-sm"
+                  >
+                    <option value={2}>2초 간격</option>
+                    <option value={3}>3초 간격</option>
+                    <option value={5}>5초 간격</option>
+                  </select>
+                </div>
+              )}
             </div>
             <div className="relative">
               <Webcam
@@ -141,10 +170,18 @@ function App() {
                     photos.length >= selectedTemplate.maxPhotos ||
                     timer !== null
                   }
-                  className="bg-white text-black px-6 py-2 rounded-full shadow-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className={`px-8 py-3 rounded-full shadow-lg transition-all flex items-center gap-2 ${
+                    photos.length >= selectedTemplate.maxPhotos
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : timer !== null
+                      ? "bg-yellow-500 text-white"
+                      : "bg-blue-500 text-white hover:bg-blue-600"
+                  }`}
                 >
-                  <Camera size={20} /> 촬영 ({photos.length}/
-                  {selectedTemplate.maxPhotos})
+                  <Camera size={24} />
+                  {timer !== null
+                    ? "촬영 준비중..."
+                    : `촬영 (${photos.length}/${selectedTemplate.maxPhotos})`}
                 </button>
               </div>
             </div>
@@ -187,14 +224,18 @@ function App() {
             <div className="mt-4 flex gap-4">
               <button
                 onClick={resetPhotos}
-                className="flex-1 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 flex items-center justify-center gap-2"
+                className="flex-1 bg-red-500 text-white px-6 py-3 rounded-full hover:bg-red-600 transition-all flex items-center justify-center gap-2"
               >
                 <RefreshCcw size={20} /> 초기화
               </button>
               <button
                 onClick={downloadResult}
                 disabled={photos.length < selectedTemplate.maxPhotos}
-                className="flex-1 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className={`flex-1 px-6 py-3 rounded-full transition-all flex items-center justify-center gap-2 ${
+                  photos.length < selectedTemplate.maxPhotos
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-green-500 text-white hover:bg-green-600"
+                }`}
               >
                 <Download size={20} /> 다운로드
               </button>
@@ -218,8 +259,8 @@ function App() {
                 }}
                 className={`p-4 rounded-lg border-2 transition-all ${
                   selectedTemplate.id === template.id
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-blue-300"
+                    ? "border-blue-500 bg-blue-50 shadow-md"
+                    : "border-gray-200 hover:border-blue-300 hover:shadow-sm"
                 }`}
               >
                 <div className="text-sm font-medium">{template.name}</div>
@@ -249,10 +290,10 @@ function App() {
               <button
                 key={index}
                 onClick={() => setSelectedBackground(bg)}
-                className={`aspect-video rounded-lg overflow-hidden border-4 ${
+                className={`aspect-video rounded-lg overflow-hidden border-4 transition-all ${
                   selectedBackground === bg
-                    ? "border-blue-500"
-                    : "border-transparent"
+                    ? "border-blue-500 shadow-lg"
+                    : "border-transparent hover:border-blue-300"
                 }`}
               >
                 <img
