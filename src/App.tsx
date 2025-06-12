@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import Webcam from "react-webcam";
 import { Camera, Download, RefreshCcw, Layout, Timer } from "lucide-react";
 import * as htmlToImage from "html-to-image";
+import imageCompression from "browser-image-compression";
 
 const backgrounds = [
   "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?q=80&w=800&auto=format&fit=crop",
@@ -42,19 +43,56 @@ function App() {
   const webcamRef = useRef<Webcam>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
-  const capture = useCallback(() => {
+  const capture = useCallback(async () => {
     if (webcamRef.current && photos.length < selectedTemplate.maxPhotos) {
       const imageSrc = webcamRef.current.getScreenshot();
       if (imageSrc) {
-        setPhotos((prev) => [...prev, imageSrc]);
+        try {
+          // Base64 이미지를 Blob으로 변환
+          const response = await fetch(imageSrc);
+          const blob = await response.blob();
+          const file = new File([blob], "photo.png", { type: "image/png" });
+
+          // 이미지 압축 옵션
+          const options = {
+            maxSizeMB: 1,
+            maxWidthOrHeight: 1920,
+            useWebWorker: true,
+            fileType: "image/png",
+          };
+
+          // 이미지 압축
+          const compressedFile = await imageCompression(file, options);
+
+          // 압축된 이미지를 Base64로 변환
+          const reader = new FileReader();
+          reader.readAsDataURL(compressedFile);
+          reader.onloadend = () => {
+            const base64data = reader.result as string;
+            setPhotos((prev) => [...prev, base64data]);
+          };
+        } catch (error) {
+          console.error("Error processing image:", error);
+          setPhotos((prev) => [...prev, imageSrc]);
+        }
       }
     }
   }, [photos, selectedTemplate.maxPhotos]);
 
   const startTimer = useCallback(() => {
     if (photos.length >= selectedTemplate.maxPhotos) return;
-    setTimer(continuousInterval);
-  }, [photos.length, selectedTemplate.maxPhotos, continuousInterval]);
+    if (continuousMode) {
+      setTimer(continuousInterval);
+    } else {
+      capture();
+    }
+  }, [
+    photos.length,
+    selectedTemplate.maxPhotos,
+    continuousMode,
+    continuousInterval,
+    capture,
+  ]);
 
   useEffect(() => {
     if (timer === null) return;
@@ -97,12 +135,47 @@ function App() {
     }
 
     htmlToImage
-      .toPng(resultRef.current)
-      .then((dataUrl) => {
-        const link = document.createElement("a");
-        link.download = "life4cut.png";
-        link.href = dataUrl;
-        link.click();
+      .toPng(resultRef.current, {
+        quality: 1.0,
+        pixelRatio: 2,
+        style: {
+          transform: "scale(1)",
+          transformOrigin: "top left",
+        },
+      })
+      .then(async (dataUrl) => {
+        try {
+          // Base64 이미지를 Blob으로 변환
+          const response = await fetch(dataUrl);
+          const blob = await response.blob();
+          const file = new File([blob], "life4cut.png", { type: "image/png" });
+
+          // 이미지 압축 옵션
+          const options = {
+            maxSizeMB: 2,
+            maxWidthOrHeight: 3840,
+            useWebWorker: true,
+            fileType: "image/png",
+          };
+
+          // 이미지 압축
+          const compressedFile = await imageCompression(file, options);
+
+          // 압축된 이미지를 다운로드
+          const url = URL.createObjectURL(compressedFile);
+          const link = document.createElement("a");
+          link.download = "life4cut.png";
+          link.href = url;
+          link.click();
+          URL.revokeObjectURL(url);
+        } catch (error) {
+          console.error("Error processing final image:", error);
+          // 압축 실패시 원본 이미지 다운로드
+          const link = document.createElement("a");
+          link.download = "life4cut.png";
+          link.href = dataUrl;
+          link.click();
+        }
       })
       .catch((err) => {
         console.error("Error downloading image:", err);
@@ -150,12 +223,17 @@ function App() {
               <Webcam
                 audio={false}
                 ref={webcamRef}
-                screenshotFormat="image/jpeg"
+                screenshotFormat="image/png"
                 className="w-full rounded-lg"
                 videoConstraints={{
-                  width: 1280,
-                  height: 720,
+                  width: { ideal: 3840 },
+                  height: { ideal: 2160 },
                   facingMode: "user",
+                  aspectRatio: 1.777777778,
+                }}
+                style={{
+                  objectFit: "cover",
+                  imageRendering: "crisp-edges",
                 }}
               />
               {timer !== null && (
@@ -210,6 +288,10 @@ function App() {
                         src={photos[index]}
                         alt={`Photo ${index + 1}`}
                         className="w-full h-full object-cover"
+                        style={{
+                          imageRendering: "crisp-edges",
+                          objectFit: "cover",
+                        }}
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400">
