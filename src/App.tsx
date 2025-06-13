@@ -14,14 +14,14 @@ const templates = [
   {
     id: "grid",
     name: "2x2 Grid",
-    layout: "grid grid-cols-2 gap-2",
+    layout: "grid grid-cols-2 gap-4 p-3",
     itemStyle: "aspect-[3/4]",
     maxPhotos: 4,
   },
   {
     id: "vertical",
     name: "Vertical Strip",
-    layout: "grid grid-cols-1 gap-2",
+    layout: "grid grid-cols-1 gap-4 p-3",
     itemStyle: "aspect-[3/2]",
     maxPhotos: 3,
   },
