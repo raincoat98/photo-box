@@ -4,6 +4,7 @@ const path = require("path");
 const fs = require("fs");
 const cors = require("cors");
 const { GetObjectCommand } = require("@aws-sdk/client-s3");
+const QRCode = require("qrcode");
 const { uploadToNAS } = require("./uploadToNAS");
 const { s3Client, bucketName } = require("./config/minio");
 require("dotenv").config();
@@ -63,14 +64,19 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
 
     const fileId = path.parse(file.filename).name;
     const expiresAt = Date.now() + 2 * 24 * 60 * 60 * 1000; // 2일 후
+    const previewUrl = `${serverUrl}/preview/${fileId}`;
 
     tempUrls.set(fileId, {
       path: remotePath,
       expiresAt,
     });
 
+    // QR 코드 생성
+    const qrCode = await QRCode.toDataURL(previewUrl);
+
     res.json({
-      url: `${serverUrl}/api/file/${fileId}`,
+      url: previewUrl,
+      qrCode,
       expiresAt: new Date(expiresAt).toISOString(),
     });
   } catch (error) {
@@ -112,6 +118,30 @@ app.get("/api/file/:fileId", async (req, res) => {
   } catch (error) {
     console.error("Download error:", error);
     res.status(500).json({ error: "파일 다운로드 실패" });
+  }
+});
+
+// QR 코드 생성 엔드포인트
+app.get("/api/qr/:fileId", async (req, res) => {
+  const { fileId } = req.params;
+  const fileInfo = tempUrls.get(fileId);
+
+  if (!fileInfo) {
+    return res.status(404).json({ error: "파일을 찾을 수 없습니다." });
+  }
+
+  if (Date.now() > fileInfo.expiresAt) {
+    tempUrls.delete(fileId);
+    return res.status(410).json({ error: "파일이 만료되었습니다." });
+  }
+
+  try {
+    const fileUrl = `${serverUrl}/api/file/${fileId}`;
+    const qrCode = await QRCode.toDataURL(fileUrl);
+    res.json({ qrCode });
+  } catch (error) {
+    console.error("QR code generation error:", error);
+    res.status(500).json({ error: "QR 코드 생성 실패" });
   }
 });
 
