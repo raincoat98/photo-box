@@ -1,0 +1,61 @@
+name: Deploy to Synology
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Build backend
+        working-directory: ./backend
+        run: npm run build
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Install sshpass & rsync
+        run: sudo apt-get install -y sshpass rsync
+
+      - name: Deploy to Synology (using rsync)
+        env:
+          SYNOLOGY_HOST: ${{ secrets.SYNOLOGY_HOST }}
+          SYNOLOGY_USERNAME: ${{ secrets.SYNOLOGY_USERNAME }}
+          SYNOLOGY_PASSWORD: ${{ secrets.SYNOLOGY_PASSWORD }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          RSYNC_PORT: ${{ secrets.RSYNC_PORT }}
+        run: |
+          # 호스트 키 자동 신뢰 추가
+          mkdir -p ~/.ssh
+          ssh-keyscan -p $RSYNC_PORT $SYNOLOGY_HOST >> ~/.ssh/known_hosts
+
+          echo "Connecting to Synology server..."
+
+          # 백엔드 배포
+          echo "Deploying backend..."
+          rsync -avz -e "sshpass -p $SYNOLOGY_PASSWORD ssh -p $RSYNC_PORT" backend/dist/ $SYNOLOGY_USERNAME@$SYNOLOGY_HOST:$DEPLOY_PATH/backend
+
+          # 프론트엔드 배포
+          echo "Deploying frontend..."
+          rsync -avz -e "sshpass -p $SYNOLOGY_PASSWORD ssh -p $RSYNC_PORT" frontend/dist/ $SYNOLOGY_USERNAME@$SYNOLOGY_HOST:$DEPLOY_PATH/frontend
