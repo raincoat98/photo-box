@@ -2,12 +2,29 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const { Client } = require("basic-ftp");
 const cors = require("cors");
+const { GetObjectCommand } = require("@aws-sdk/client-s3");
+const { uploadToNAS } = require("./uploadToNAS");
+const { s3Client, bucketName } = require("./config/minio");
 require("dotenv").config();
+
+// 필수 환경변수 체크
+const requiredEnvVars = [
+  "MINIO_ENDPOINT",
+  "MINIO_ACCESS_KEY",
+  "MINIO_SECRET_KEY",
+  "MINIO_BUCKET_NAME",
+];
+
+requiredEnvVars.forEach((envVar) => {
+  if (!process.env[envVar]) {
+    throw new Error(`환경변수 ${envVar}가 설정되지 않았습니다.`);
+  }
+});
 
 const app = express();
 const port = process.env.PORT || 3001;
+const serverUrl = process.env.SERVER_URL || `http://localhost:${port}`;
 
 app.use(cors());
 app.use(express.json());
@@ -31,27 +48,6 @@ const upload = multer({ storage: storage });
 // 임시 URL 저장소
 const tempUrls = new Map();
 
-// FTP 클라이언트 설정
-const ftpConfig = {
-  host: process.env.NAS_HOST || "ww57403.synology.me",
-  port: process.env.NAS_PORT || 2121,
-  username: process.env.NAS_USERNAME || "kuro",
-  password: process.env.NAS_PASSWORD || "sw4261!@sw",
-};
-
-// FTP를 사용하여 NAS에 파일 업로드
-async function uploadToNAS(localPath, filename) {
-  const client = new Client();
-  try {
-    await client.access(ftpConfig);
-    const remotePath = `/photo-box/${filename}`;
-    await client.uploadFrom(localPath, remotePath);
-    return remotePath;
-  } finally {
-    client.close();
-  }
-}
-
 // 파일 업로드 엔드포인트
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   try {
@@ -74,9 +70,7 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     });
 
     res.json({
-      url: `${
-        process.env.SERVER_URL || "http://localhost:3001"
-      }/api/file/${fileId}`,
+      url: `${serverUrl}/api/file/${fileId}`,
       expiresAt: new Date(expiresAt).toISOString(),
     });
   } catch (error) {
@@ -99,21 +93,25 @@ app.get("/api/file/:fileId", async (req, res) => {
     return res.status(410).json({ error: "파일이 만료되었습니다." });
   }
 
-  const client = new Client();
   try {
-    await client.access(ftpConfig);
-    const stream = await client.downloadToBuffer(fileInfo.path);
+    const command = new GetObjectCommand({
+      Bucket: bucketName,
+      Key: fileInfo.path,
+    });
+
+    const response = await s3Client.send(command);
+    const stream = response.Body;
+
     res.setHeader("Content-Type", "application/octet-stream");
     res.setHeader(
       "Content-Disposition",
       `attachment; filename=${path.basename(fileInfo.path)}`
     );
-    res.send(stream);
+
+    stream.pipe(res);
   } catch (error) {
     console.error("Download error:", error);
     res.status(500).json({ error: "파일 다운로드 실패" });
-  } finally {
-    client.close();
   }
 });
 

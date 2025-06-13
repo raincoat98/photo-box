@@ -1,12 +1,7 @@
-const AWS = require("aws-sdk");
+const { PutObjectCommand } = require("@aws-sdk/client-s3");
 const path = require("path");
-
-const s3 = new AWS.S3({
-  endpoint: process.env.MINIO_ENDPOINT || "http://NAS_IP:9000",
-  accessKeyId: process.env.MINIO_ACCESS_KEY || "YOUR_ROOT_USER",
-  secretAccessKey: process.env.MINIO_SECRET_KEY || "YOUR_ROOT_PASSWORD",
-  s3ForcePathStyle: true,
-});
+const fs = require("fs");
+const { s3Client, bucketName } = require("./config/minio");
 
 async function uploadToNAS(localPath, remoteFileName) {
   // 날짜별 폴더 생성
@@ -18,19 +13,29 @@ async function uploadToNAS(localPath, remoteFileName) {
   const remotePath = `${remoteDir}/${remoteFileName}`;
 
   try {
-    const fileContent = require("fs").readFileSync(localPath);
+    // 파일 존재 여부 확인
+    if (!fs.existsSync(localPath)) {
+      throw new Error(`파일을 찾을 수 없습니다: ${localPath}`);
+    }
 
-    const params = {
-      Bucket: process.env.MINIO_BUCKET_NAME || "your-bucket-name",
+    // 파일 읽기
+    const fileContent = fs.readFileSync(localPath);
+    console.log("📁 파일 읽기 성공:", localPath);
+
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
       Key: remotePath,
       Body: fileContent,
-    };
+    });
 
-    await s3.upload(params).promise();
+    await s3Client.send(command);
     console.log("✅ MinIO 업로드 성공:", remotePath);
     return remotePath;
   } catch (err) {
     console.error("❌ MinIO 업로드 실패:", err.message);
+    if (err.code === "ENOENT") {
+      console.error("파일이 존재하지 않습니다:", localPath);
+    }
     throw err;
   }
 }
