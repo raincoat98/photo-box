@@ -69,3 +69,7 @@ jobs:
           # 프론트엔드 배포
           echo "Deploying frontend..."
           rsync -avz -e "sshpass -p $SYNOLOGY_PASSWORD ssh -p $RSYNC_PORT" frontend/dist/ $SYNOLOGY_USERNAME@$SYNOLOGY_HOST:$DEPLOY_PATH/frontend
+
+          # .env 파일 배포
+          echo "Deploying .env file..."
+          rsync -avz -e "sshpass -p $SYNOLOGY_PASSWORD ssh -p $RSYNC_PORT" backend/.env $SYNOLOGY_USERNAME@$SYNOLOGY_HOST:$DEPLOY_PATH/backend/.env
