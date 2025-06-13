@@ -75,6 +75,7 @@ function App() {
   );
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [showQR, setShowQR] = useState(false);
+  const [isMirrored, setIsMirrored] = useState(true);
   const [downloadUrl, setDownloadUrl] = useState<string>("");
   const [isDownloading, setIsDownloading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -485,12 +486,26 @@ function App() {
                             </select>
                           </div>
                         )}
+                        <button
+                          onClick={() => setIsMirrored(!isMirrored)}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 ${
+                            isMirrored
+                              ? "bg-pink-500 text-white shadow-lg shadow-pink-500/20"
+                              : isDarkMode
+                              ? "bg-purple-500/20 text-purple-200 hover:bg-purple-500/30"
+                              : "bg-pink-100 text-pink-600 hover:bg-pink-200"
+                          }`}
+                        >
+                          <Layout size={18} />
+                          좌우반전
+                        </button>
                       </div>
                       <div className="relative">
                         <Webcam
                           audio={false}
                           ref={webcamRef}
                           screenshotFormat="image/png"
+                          mirrored={isMirrored}
                           className="w-full rounded-xl shadow-lg transition-all duration-500 hover:shadow-2xl"
                           videoConstraints={{
                             width: {
