@@ -72,4 +72,4 @@ jobs:
 
           # .env 파일 배포
           echo "Deploying .env file..."
-          rsync -avz --chmod=755 -e "sshpass -p $SYNOLOGY_PASSWORD ssh -p $RSYNC_PORT" backend/.env $SYNOLOGY_USERNAME@$SYNOLOGY_HOST:$DEPLOY_PATH/backend/.env
+          cat backend/.env | sshpass -p $SYNOLOGY_PASSWORD ssh -p $RSYNC_PORT $SYNOLOGY_USERNAME@$SYNOLOGY_HOST "mkdir -p $DEPLOY_PATH/backend && cat > $DEPLOY_PATH/backend/.env"
