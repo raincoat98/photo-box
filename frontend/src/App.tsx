@@ -76,11 +76,11 @@ function App() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [showQR, setShowQR] = useState(false);
   const [isMirrored, setIsMirrored] = useState(true);
-  const [downloadUrl, setDownloadUrl] = useState<string>("");
   const [isDownloading, setIsDownloading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const webcamRef = useRef<Webcam>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const [frameSize, setFrameSize] = useState({ width: 0, height: 0 });
@@ -108,6 +108,28 @@ function App() {
     selectedTemplate.height,
   ]);
 
+  const getResolutionMultiplier = useCallback(() => {
+    return {
+      low: 1,
+      medium: 2,
+      high: 3,
+    }[resolution];
+  }, [resolution]);
+
+  const getPhotoSize = useCallback(() => {
+    const multiplier = getResolutionMultiplier();
+    if (selectedTemplate.id === "vertical-strip") {
+      return {
+        width: 200 * multiplier,
+        height: 600 * multiplier,
+      };
+    }
+    return {
+      width: 300 * multiplier,
+      height: 400 * multiplier,
+    };
+  }, [selectedTemplate.id, getResolutionMultiplier]);
+
   const capture = useCallback(async () => {
     if (webcamRef.current && photos.length < selectedTemplate.maxPhotos) {
       const imageSrc = webcamRef.current.getScreenshot();
@@ -121,7 +143,7 @@ function App() {
           // 이미지 압축 옵션
           const options = {
             maxSizeMB: 1,
-            maxWidthOrHeight: 1920,
+            maxWidthOrHeight: getPhotoSize().width,
             useWebWorker: true,
             fileType: "image/png",
           };
@@ -154,7 +176,7 @@ function App() {
         }
       }
     }
-  }, [photos, selectedTemplate.maxPhotos]);
+  }, [photos, selectedTemplate.maxPhotos, getPhotoSize]);
 
   const startTimer = useCallback(() => {
     if (photos.length >= selectedTemplate.maxPhotos) return;
@@ -207,32 +229,25 @@ function App() {
   };
 
   const downloadResult = useCallback(() => {
-    if (resultRef.current === null || isDownloading) {
-      return;
-    }
+    if (resultRef.current === null || isDownloading) return;
 
     setIsDownloading(true);
 
-    const resolutionMultiplier = {
-      low: 3,
-      medium: 5,
-      high: 10,
-    }[resolution];
+    const resolutionMultiplier = getResolutionMultiplier();
+    const node = resultRef.current;
+    const width = node.offsetWidth * resolutionMultiplier;
+    const height = node.offsetHeight * resolutionMultiplier;
 
     htmlToImage
-      .toPng(resultRef.current, {
+      .toPng(node, {
         quality: 1.0,
         pixelRatio: resolutionMultiplier,
+        width,
+        height,
         style: {
-          transform: "scale(1)",
+          transform: `scale(${resolutionMultiplier})`,
           transformOrigin: "top left",
         },
-        width: selectedTemplate.width
-          ? selectedTemplate.width * resolutionMultiplier
-          : undefined,
-        height: selectedTemplate.height
-          ? selectedTemplate.height * resolutionMultiplier
-          : undefined,
       })
       .then(async (dataUrl) => {
         try {
@@ -263,7 +278,6 @@ function App() {
           link.click();
         } catch (error) {
           console.error("Error processing final image:", error);
-          // 압축 실패시 원본 이미지 다운로드
           setDownloadUrl(dataUrl);
           setShowQR(true);
           const link = document.createElement("a");
@@ -281,12 +295,7 @@ function App() {
           setIsDownloading(false);
         }, 1000);
       });
-  }, [
-    resolution,
-    selectedTemplate.width,
-    selectedTemplate.height,
-    isDownloading,
-  ]);
+  }, [getResolutionMultiplier, isDownloading]);
 
   const handleUpload = async (file: File) => {
     const formData = new FormData();
@@ -319,18 +328,14 @@ function App() {
     setIsUploading(true);
     setUploadError(null);
 
-    const resolutionMultiplier = {
-      low: 3,
-      medium: 5,
-      high: 10,
-    }[resolution];
+    const resolutionMultiplier = getResolutionMultiplier();
 
     htmlToImage
       .toPng(resultRef.current, {
         quality: 1.0,
         pixelRatio: resolutionMultiplier,
         style: {
-          transform: "scale(1)",
+          transform: `scale(${resolutionMultiplier})`,
           transformOrigin: "top left",
         },
         width: selectedTemplate.width
@@ -381,7 +386,7 @@ function App() {
         }, 1000);
       });
   }, [
-    resolution,
+    getResolutionMultiplier,
     selectedTemplate.width,
     selectedTemplate.height,
     isDownloading,
@@ -408,7 +413,7 @@ function App() {
                 isDarkMode ? "bg-gray-900" : "bg-gray-100"
               }`}
             >
-              <div className="max-w-7xl mx-auto flex flex-row gap-8">
+              <div className="max-w-7xl mx-auto flex flex-row gap-8 pt-8">
                 {/* 왼쪽: 메인(카메라/결과) */}
                 <div className="flex-1 flex flex-col gap-8">
                   <div className="flex justify-between items-center mb-8">
@@ -509,16 +514,10 @@ function App() {
                           className="w-full rounded-xl shadow-lg transition-all duration-500 hover:shadow-2xl"
                           videoConstraints={{
                             width: {
-                              ideal:
-                                selectedTemplate.id === "vertical-strip"
-                                  ? 200
-                                  : 300,
+                              ideal: getPhotoSize().width,
                             },
                             height: {
-                              ideal:
-                                selectedTemplate.id === "vertical-strip"
-                                  ? 600
-                                  : 400,
+                              ideal: getPhotoSize().height,
                             },
                             facingMode: "user",
                             aspectRatio: getPhotoAspectRatio(),
@@ -527,14 +526,8 @@ function App() {
                             objectFit: "cover",
                             imageRendering: "crisp-edges",
                             aspectRatio: getPhotoAspectRatio(),
-                            maxWidth:
-                              selectedTemplate.id === "vertical-strip"
-                                ? "200px"
-                                : "300px",
-                            maxHeight:
-                              selectedTemplate.id === "vertical-strip"
-                                ? "600px"
-                                : "400px",
+                            maxWidth: `${getPhotoSize().width}px`,
+                            maxHeight: `${getPhotoSize().height}px`,
                             margin: "0 auto",
                           }}
                         />
