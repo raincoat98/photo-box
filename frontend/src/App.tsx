@@ -907,8 +907,8 @@ function App() {
                       </h3>
                       <div className="p-4 bg-white rounded-xl">
                         <QRCodeSVG
-                          value={`${
-                            window.location.origin
+                          value={`${window.location.protocol}//${
+                            window.location.hostname
                           }/preview/${uploadedFile.url.split("/").pop()}`}
                           size={200}
                           level="H"
