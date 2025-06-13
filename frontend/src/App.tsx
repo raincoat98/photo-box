@@ -413,13 +413,13 @@ function App() {
                 isDarkMode ? "bg-gray-900" : "bg-gray-100"
               }`}
             >
-              <div className="max-w-7xl mx-auto flex flex-row gap-8 pt-8">
+              <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 pt-8 px-4">
                 {/* 왼쪽: 메인(카메라/결과) */}
                 <div className="flex-1 flex flex-col gap-8">
-                  <div className="flex justify-between items-center mb-8">
+                  <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
                     <div className="relative group">
                       <h1
-                        className={`text-4xl font-bold text-center transition-all duration-500 animate-fade-in relative z-10 flex flex-col items-center gap-2 ${
+                        className={`text-3xl sm:text-4xl font-bold text-center transition-all duration-500 animate-fade-in relative z-10 flex flex-col items-center gap-2 ${
                           isDarkMode ? "text-white" : "text-gray-900"
                         }`}
                       >
@@ -447,16 +447,16 @@ function App() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     {/* Camera Section */}
                     <div
-                      className={`p-6 rounded-2xl shadow-xl border transition-all duration-500 hover:shadow-2xl ${
+                      className={`p-4 sm:p-6 rounded-2xl shadow-xl border transition-all duration-500 hover:shadow-2xl ${
                         isDarkMode
                           ? "bg-purple-900/30 backdrop-blur-sm border-purple-500/30"
                           : "bg-white/80 backdrop-blur-sm border-pink-200"
                       }`}
                     >
-                      <div className="mb-4 flex flex-wrap justify-center gap-4">
+                      <div className="mb-4 flex flex-wrap justify-center gap-2 sm:gap-4">
                         <button
                           onClick={() => setContinuousMode(!continuousMode)}
-                          className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 ${
+                          className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 text-sm sm:text-base ${
                             continuousMode
                               ? "bg-pink-500 text-white shadow-lg shadow-pink-500/20"
                               : isDarkMode
@@ -464,18 +464,18 @@ function App() {
                               : "bg-pink-100 text-pink-600 hover:bg-pink-200"
                           }`}
                         >
-                          <Camera size={18} />
+                          <Camera size={16} className="sm:w-5 sm:h-5" />
                           연속 촬영
                         </button>
                         {continuousMode && (
                           <div
-                            className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 ${
+                            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full transition-all duration-300 text-sm sm:text-base ${
                               isDarkMode
                                 ? "bg-purple-500/20 text-purple-200"
                                 : "bg-pink-100 text-pink-600"
                             }`}
                           >
-                            <Timer size={16} />
+                            <Timer size={14} className="sm:w-4 sm:h-4" />
                             <select
                               value={continuousInterval}
                               onChange={(e) =>
@@ -485,15 +485,15 @@ function App() {
                                 isDarkMode ? "text-purple-200" : "text-pink-600"
                               }`}
                             >
-                              <option value={2}>2초 간격</option>
-                              <option value={3}>3초 간격</option>
-                              <option value={5}>5초 간격</option>
+                              <option value={2}>2초</option>
+                              <option value={3}>3초</option>
+                              <option value={5}>5초</option>
                             </select>
                           </div>
                         )}
                         <button
                           onClick={() => setIsMirrored(!isMirrored)}
-                          className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 ${
+                          className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 text-sm sm:text-base ${
                             isMirrored
                               ? "bg-pink-500 text-white shadow-lg shadow-pink-500/20"
                               : isDarkMode
@@ -501,7 +501,7 @@ function App() {
                               : "bg-pink-100 text-pink-600 hover:bg-pink-200"
                           }`}
                         >
-                          <Layout size={18} />
+                          <Layout size={16} className="sm:w-5 sm:h-5" />
                           좌우반전
                         </button>
                       </div>
@@ -533,7 +533,7 @@ function App() {
                         />
                         {timer !== null && (
                           <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm rounded-xl animate-pulse">
-                            <span className="text-white text-7xl font-bold animate-bounce">
+                            <span className="text-white text-5xl sm:text-7xl font-bold animate-bounce">
                               {timer}
                             </span>
                           </div>
@@ -542,13 +542,13 @@ function App() {
                           {photos.length > 0 && (
                             <button
                               onClick={resetPhotos}
-                              className={`px-6 py-2 rounded-full shadow-lg transition-all duration-300 hover:scale-105 flex items-center gap-2 ${
+                              className={`px-4 sm:px-6 py-2 rounded-full shadow-lg transition-all duration-300 hover:scale-105 flex items-center gap-2 text-sm sm:text-base ${
                                 isDarkMode
                                   ? "bg-purple-500 text-white hover:bg-purple-600 shadow-purple-500/20"
                                   : "bg-pink-500 text-white hover:bg-pink-600 shadow-pink-500/20"
                               }`}
                             >
-                              <Camera size={24} />
+                              <Camera size={20} className="sm:w-6 sm:h-6" />
                               <span>다시 촬영</span>
                             </button>
                           )}
@@ -558,7 +558,7 @@ function App() {
                               photos.length >= selectedTemplate.maxPhotos ||
                               timer !== null
                             }
-                            className={`px-6 py-2 rounded-full shadow-lg transition-all duration-300 hover:scale-105 flex items-center gap-2 ${
+                            className={`px-4 sm:px-6 py-2 rounded-full shadow-lg transition-all duration-300 hover:scale-105 flex items-center gap-2 text-sm sm:text-base ${
                               photos.length >= selectedTemplate.maxPhotos
                                 ? isDarkMode
                                   ? "bg-gray-700 text-gray-500 cursor-not-allowed"
@@ -570,7 +570,7 @@ function App() {
                                 : "bg-pink-500 text-white hover:bg-pink-600 shadow-pink-500/20"
                             }`}
                           >
-                            <Camera size={24} />
+                            <Camera size={20} className="sm:w-6 sm:h-6" />
                             {timer !== null
                               ? "촬영 준비중..."
                               : `촬영 (${photos.length}/${selectedTemplate.maxPhotos})`}
@@ -581,7 +581,7 @@ function App() {
 
                     {/* Result Section */}
                     <div
-                      className={`p-6 rounded-2xl shadow-xl border transition-all duration-500 hover:shadow-2xl ${
+                      className={`p-4 sm:p-6 rounded-2xl shadow-xl border transition-all duration-500 hover:shadow-2xl ${
                         isDarkMode
                           ? "bg-purple-900/30 backdrop-blur-sm border-purple-500/30"
                           : "bg-white/80 backdrop-blur-sm border-pink-200"
@@ -720,7 +720,7 @@ function App() {
                         </div>
                       )}
                       <div className="mt-4 flex flex-col gap-4">
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                           <button
                             onClick={() => setResolution("low")}
                             className={`flex-1 px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 ${
@@ -758,7 +758,7 @@ function App() {
                             고해상도
                           </button>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                           <button
                             onClick={downloadResult}
                             disabled={
@@ -811,7 +811,7 @@ function App() {
                   </div>
                 </div>
                 {/* 오른쪽: 사이드바(템플릿/배경 선택) */}
-                <div className="w-64 flex flex-col gap-6 sticky top-8 self-start">
+                <div className="w-full lg:w-64 flex flex-col gap-6 lg:sticky lg:top-8 self-start">
                   {/* Template Selection */}
                   <div
                     className={`p-4 rounded-2xl shadow-xl border transition-all duration-500 hover:shadow-2xl ${
@@ -827,7 +827,7 @@ function App() {
                     >
                       <Layout size={20} /> 템플릿
                     </h2>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2">
                       {templates.map((template) => (
                         <button
                           key={template.id}
