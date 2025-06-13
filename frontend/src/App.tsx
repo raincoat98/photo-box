@@ -14,6 +14,8 @@ import imageCompression from "browser-image-compression";
 import frameBG from "./assets/frame/bg.jpg";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import ImagePreview from "./components/ImagePreview";
+import QRCodeGenerator from "./components/QRCodeGenerator";
+import { QRCodeSVG } from "qrcode.react";
 
 const backgrounds = [
   "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?q=80&w=800&auto=format&fit=crop",
@@ -81,6 +83,7 @@ function App() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [showCurrentUrlQR, setShowCurrentUrlQR] = useState(false);
   const webcamRef = useRef<Webcam>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const [frameSize, setFrameSize] = useState({ width: 0, height: 0 });
@@ -903,10 +906,13 @@ function App() {
                         QR 코드로 다운로드
                       </h3>
                       <div className="p-4 bg-white rounded-xl">
-                        <img
-                          src={uploadedFile.qrCode}
-                          alt="QR Code"
-                          className="w-48 h-48"
+                        <QRCodeSVG
+                          value={`${
+                            window.location.origin
+                          }/preview/${uploadedFile.url.split("/").pop()}`}
+                          size={200}
+                          level="H"
+                          includeMargin={true}
                         />
                       </div>
                       <p
@@ -944,6 +950,52 @@ function App() {
                           닫기
                         </button>
                       </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 현재 URL QR 코드 버튼 */}
+              <button
+                onClick={() => setShowCurrentUrlQR(true)}
+                className={`fixed bottom-4 right-4 p-3 rounded-full shadow-lg transition-all duration-300 hover:scale-105 ${
+                  isDarkMode
+                    ? "bg-purple-500 text-white hover:bg-purple-600"
+                    : "bg-pink-500 text-white hover:bg-pink-600"
+                }`}
+              >
+                <QrCode size={24} />
+              </button>
+
+              {/* 현재 URL QR 코드 모달 */}
+              {showCurrentUrlQR && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+                  <div
+                    className={`p-6 rounded-2xl shadow-xl border ${
+                      isDarkMode
+                        ? "bg-purple-900/90 backdrop-blur-sm border-purple-500/30"
+                        : "bg-white/90 backdrop-blur-sm border-pink-200"
+                    }`}
+                  >
+                    <div className="flex flex-col items-center gap-4">
+                      <h3
+                        className={`text-xl font-semibold ${
+                          isDarkMode ? "text-white" : "text-gray-900"
+                        }`}
+                      >
+                        현재 페이지 QR 코드
+                      </h3>
+                      <QRCodeGenerator url={window.location.href} />
+                      <button
+                        onClick={() => setShowCurrentUrlQR(false)}
+                        className={`px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 ${
+                          isDarkMode
+                            ? "bg-purple-500 text-white hover:bg-purple-600"
+                            : "bg-pink-500 text-white hover:bg-pink-600"
+                        }`}
+                      >
+                        닫기
+                      </button>
                     </div>
                   </div>
                 </div>
