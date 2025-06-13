@@ -13,6 +13,7 @@ import * as htmlToImage from "html-to-image";
 import imageCompression from "browser-image-compression";
 import { QRCodeSVG } from "qrcode.react";
 import frameBG from "./assets/frame/bg.jpg";
+import axios from "axios";
 
 const backgrounds = [
   "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?q=80&w=800&auto=format&fit=crop",
@@ -70,6 +71,8 @@ function App() {
   const [showQR, setShowQR] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string>("");
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const webcamRef = useRef<Webcam>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const [frameSize, setFrameSize] = useState({ width: 0, height: 0 });
@@ -277,12 +280,34 @@ function App() {
     isDownloading,
   ]);
 
+  const uploadToServer = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL || "http://localhost:3001"}/api/upload`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      return response.data.url;
+    } catch (error) {
+      console.error("Upload error:", error);
+      throw new Error("이미지 업로드 중 오류가 발생했습니다.");
+    }
+  };
+
   const generateQRCode = useCallback(() => {
-    if (resultRef.current === null || isDownloading) {
+    if (resultRef.current === null || isDownloading || isUploading) {
       return;
     }
 
-    setIsDownloading(true);
+    setIsUploading(true);
+    setUploadError(null);
 
     const resolutionMultiplier = {
       low: 3,
@@ -323,22 +348,26 @@ function App() {
           // 이미지 압축
           const compressedFile = await imageCompression(file, options);
 
-          // 압축된 이미지 URL 생성
-          const url = URL.createObjectURL(compressedFile);
-          setDownloadUrl(url);
+          // 서버에 업로드
+          const serverUrl = await uploadToServer(compressedFile);
+          setDownloadUrl(serverUrl);
           setShowQR(true);
         } catch (error) {
           console.error("Error processing image:", error);
-          setDownloadUrl(dataUrl);
-          setShowQR(true);
+          setUploadError(
+            error instanceof Error
+              ? error.message
+              : "이미지 업로드 중 오류가 발생했습니다."
+          );
         }
       })
       .catch((err) => {
         console.error("Error generating QR code:", err);
+        setUploadError("QR 코드 생성 중 오류가 발생했습니다.");
       })
       .finally(() => {
         setTimeout(() => {
-          setIsDownloading(false);
+          setIsUploading(false);
         }, 1000);
       });
   }, [
@@ -346,6 +375,7 @@ function App() {
     selectedTemplate.width,
     selectedTemplate.height,
     isDownloading,
+    isUploading,
   ]);
 
   useEffect(() => {
@@ -718,11 +748,11 @@ function App() {
                     onClick={generateQRCode}
                     disabled={
                       photos.length !== selectedTemplate.maxPhotos ||
-                      isDownloading
+                      isUploading
                     }
                     className={`flex-1 px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 flex items-center gap-2 ${
                       photos.length !== selectedTemplate.maxPhotos ||
-                      isDownloading
+                      isUploading
                         ? isDarkMode
                           ? "bg-gray-700 text-gray-500 cursor-not-allowed"
                           : "bg-gray-300 text-gray-500 cursor-not-allowed"
@@ -732,7 +762,7 @@ function App() {
                     }`}
                   >
                     <QrCode size={20} />
-                    <span>{isDownloading ? "생성 중..." : "QR 코드"}</span>
+                    <span>{isUploading ? "업로드 중..." : "QR 코드"}</span>
                   </button>
                 </div>
               </div>
@@ -849,21 +879,47 @@ function App() {
               >
                 QR 코드를 스캔하여 이미지를 다운로드하세요
               </p>
-              <button
-                onClick={() => {
-                  setShowQR(false);
-                  URL.revokeObjectURL(downloadUrl);
-                }}
-                className={`px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 ${
-                  isDarkMode
-                    ? "bg-purple-500 text-white hover:bg-purple-600"
-                    : "bg-pink-500 text-white hover:bg-pink-600"
+              <p
+                className={`text-xs ${
+                  isDarkMode ? "text-purple-300" : "text-pink-600"
                 }`}
               >
-                닫기
-              </button>
+                유효기간: 2일
+              </p>
+              <div className="flex flex-col items-center gap-2">
+                <a
+                  href={downloadUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`text-sm underline ${
+                    isDarkMode ? "text-purple-300" : "text-pink-600"
+                  }`}
+                >
+                  직접 링크 열기
+                </a>
+                <button
+                  onClick={() => {
+                    setShowQR(false);
+                    setDownloadUrl("");
+                  }}
+                  className={`px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 ${
+                    isDarkMode
+                      ? "bg-purple-500 text-white hover:bg-purple-600"
+                      : "bg-pink-500 text-white hover:bg-pink-600"
+                  }`}
+                >
+                  닫기
+                </button>
+              </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 에러 메시지 */}
+      {uploadError && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-full shadow-lg">
+          {uploadError}
         </div>
       )}
     </div>
