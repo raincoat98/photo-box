@@ -329,21 +329,20 @@ function App() {
     setUploadError(null);
 
     const resolutionMultiplier = getResolutionMultiplier();
+    const node = resultRef.current;
+    const width = node.offsetWidth * resolutionMultiplier;
+    const height = node.offsetHeight * resolutionMultiplier;
 
     htmlToImage
-      .toPng(resultRef.current, {
+      .toPng(node, {
         quality: 1.0,
         pixelRatio: resolutionMultiplier,
+        width,
+        height,
         style: {
           transform: `scale(${resolutionMultiplier})`,
           transformOrigin: "top left",
         },
-        width: selectedTemplate.width
-          ? selectedTemplate.width * resolutionMultiplier
-          : undefined,
-        height: selectedTemplate.height
-          ? selectedTemplate.height * resolutionMultiplier
-          : undefined,
       })
       .then(async (dataUrl) => {
         try {
@@ -365,7 +364,6 @@ function App() {
 
           // 서버에 업로드
           await handleUpload(compressedFile);
-          setDownloadUrl(dataUrl);
           setShowQR(true);
         } catch (error) {
           console.error("Error processing image:", error);
@@ -385,13 +383,7 @@ function App() {
           setIsUploading(false);
         }, 1000);
       });
-  }, [
-    getResolutionMultiplier,
-    selectedTemplate.width,
-    selectedTemplate.height,
-    isDownloading,
-    isUploading,
-  ]);
+  }, [getResolutionMultiplier, isDownloading, isUploading]);
 
   useEffect(() => {
     if (!selectedTemplate.frameUrl) return;
