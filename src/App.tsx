@@ -1,8 +1,17 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import Webcam from "react-webcam";
-import { Camera, Download, Layout, Timer, Sun, Moon } from "lucide-react";
+import {
+  Camera,
+  Download,
+  Layout,
+  Timer,
+  Sun,
+  Moon,
+  QrCode,
+} from "lucide-react";
 import * as htmlToImage from "html-to-image";
 import imageCompression from "browser-image-compression";
+import { QRCodeSVG } from "qrcode.react";
 import frameBG from "./assets/frame/bg.jpg";
 
 const backgrounds = [
@@ -55,9 +64,12 @@ function App() {
   const [continuousMode, setContinuousMode] = useState(false);
   const [continuousInterval, setContinuousInterval] = useState(3);
   const [resolution, setResolution] = useState<"low" | "medium" | "high">(
-    "high"
+    "medium"
   );
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [showQR, setShowQR] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState<string>("");
+  const [isDownloading, setIsDownloading] = useState(false);
   const webcamRef = useRef<Webcam>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const [frameSize, setFrameSize] = useState({ width: 0, height: 0 });
@@ -184,9 +196,11 @@ function App() {
   };
 
   const downloadResult = useCallback(() => {
-    if (resultRef.current === null) {
+    if (resultRef.current === null || isDownloading) {
       return;
     }
+
+    setIsDownloading(true);
 
     const resolutionMultiplier = {
       low: 3,
@@ -229,14 +243,18 @@ function App() {
 
           // 압축된 이미지를 다운로드
           const url = URL.createObjectURL(compressedFile);
+          setDownloadUrl(url);
+          setShowQR(true);
+
           const link = document.createElement("a");
           link.download = "life4cut.png";
           link.href = url;
           link.click();
-          URL.revokeObjectURL(url);
         } catch (error) {
           console.error("Error processing final image:", error);
           // 압축 실패시 원본 이미지 다운로드
+          setDownloadUrl(dataUrl);
+          setShowQR(true);
           const link = document.createElement("a");
           link.download = "life4cut.png";
           link.href = dataUrl;
@@ -245,8 +263,90 @@ function App() {
       })
       .catch((err) => {
         console.error("Error downloading image:", err);
+      })
+      .finally(() => {
+        // 1초 후에 다운로드 상태 해제
+        setTimeout(() => {
+          setIsDownloading(false);
+        }, 1000);
       });
-  }, []);
+  }, [
+    resolution,
+    selectedTemplate.width,
+    selectedTemplate.height,
+    isDownloading,
+  ]);
+
+  const generateQRCode = useCallback(() => {
+    if (resultRef.current === null || isDownloading) {
+      return;
+    }
+
+    setIsDownloading(true);
+
+    const resolutionMultiplier = {
+      low: 3,
+      medium: 5,
+      high: 10,
+    }[resolution];
+
+    htmlToImage
+      .toPng(resultRef.current, {
+        quality: 1.0,
+        pixelRatio: resolutionMultiplier,
+        style: {
+          transform: "scale(1)",
+          transformOrigin: "top left",
+        },
+        width: selectedTemplate.width
+          ? selectedTemplate.width * resolutionMultiplier
+          : undefined,
+        height: selectedTemplate.height
+          ? selectedTemplate.height * resolutionMultiplier
+          : undefined,
+      })
+      .then(async (dataUrl) => {
+        try {
+          // Base64 이미지를 Blob으로 변환
+          const response = await fetch(dataUrl);
+          const blob = await response.blob();
+          const file = new File([blob], "life4cut.png", { type: "image/png" });
+
+          // 이미지 압축 옵션
+          const options = {
+            maxSizeMB: 2,
+            maxWidthOrHeight: 3840,
+            useWebWorker: true,
+            fileType: "image/png",
+          };
+
+          // 이미지 압축
+          const compressedFile = await imageCompression(file, options);
+
+          // 압축된 이미지 URL 생성
+          const url = URL.createObjectURL(compressedFile);
+          setDownloadUrl(url);
+          setShowQR(true);
+        } catch (error) {
+          console.error("Error processing image:", error);
+          setDownloadUrl(dataUrl);
+          setShowQR(true);
+        }
+      })
+      .catch((err) => {
+        console.error("Error generating QR code:", err);
+      })
+      .finally(() => {
+        setTimeout(() => {
+          setIsDownloading(false);
+        }, 1000);
+      });
+  }, [
+    resolution,
+    selectedTemplate.width,
+    selectedTemplate.height,
+    isDownloading,
+  ]);
 
   useEffect(() => {
     if (!selectedTemplate.frameUrl) return;
@@ -265,7 +365,7 @@ function App() {
           : "bg-gradient-to-br from-pink-100 via-purple-100 to-indigo-100"
       }`}
     >
-      <div className="max-w-5xl mx-auto flex flex-row gap-8">
+      <div className="max-w-7xl mx-auto flex flex-row gap-8">
         {/* 왼쪽: 메인(카메라/결과) */}
         <div className="flex-1 flex flex-col gap-8">
           <div className="flex justify-between items-center mb-8">
@@ -385,6 +485,19 @@ function App() {
                   </div>
                 )}
                 <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2">
+                  {photos.length > 0 && (
+                    <button
+                      onClick={resetPhotos}
+                      className={`px-6 py-2 rounded-full shadow-lg transition-all duration-300 hover:scale-105 flex items-center gap-2 ${
+                        isDarkMode
+                          ? "bg-purple-500 text-white hover:bg-purple-600 shadow-purple-500/20"
+                          : "bg-pink-500 text-white hover:bg-pink-600 shadow-pink-500/20"
+                      }`}
+                    >
+                      <Camera size={24} />
+                      <span>다시 촬영</span>
+                    </button>
+                  )}
                   <button
                     onClick={startTimer}
                     disabled={
@@ -581,25 +694,45 @@ function App() {
                 <div className="flex gap-2">
                   <button
                     onClick={downloadResult}
-                    className={`flex-1 px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 ${
-                      isDarkMode
+                    disabled={
+                      photos.length !== selectedTemplate.maxPhotos ||
+                      isDownloading
+                    }
+                    className={`flex-1 px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 flex items-center gap-2 ${
+                      photos.length !== selectedTemplate.maxPhotos ||
+                      isDownloading
+                        ? isDarkMode
+                          ? "bg-gray-700 text-gray-500 cursor-not-allowed"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : isDarkMode
                         ? "bg-purple-500 text-white shadow-lg shadow-purple-500/20"
                         : "bg-pink-100 text-pink-600 hover:bg-pink-200"
                     }`}
                   >
-                    <Download size={18} />
-                    <span>결과 다운로드</span>
+                    <Download size={20} />
+                    <span>
+                      {isDownloading ? "다운로드 중..." : "결과 다운로드"}
+                    </span>
                   </button>
                   <button
-                    onClick={resetPhotos}
-                    className={`flex-1 px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 ${
-                      isDarkMode
+                    onClick={generateQRCode}
+                    disabled={
+                      photos.length !== selectedTemplate.maxPhotos ||
+                      isDownloading
+                    }
+                    className={`flex-1 px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 flex items-center gap-2 ${
+                      photos.length !== selectedTemplate.maxPhotos ||
+                      isDownloading
+                        ? isDarkMode
+                          ? "bg-gray-700 text-gray-500 cursor-not-allowed"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : isDarkMode
                         ? "bg-purple-500 text-white shadow-lg shadow-purple-500/20"
                         : "bg-pink-100 text-pink-600 hover:bg-pink-200"
                     }`}
                   >
-                    <Camera size={18} />
-                    <span>다시 촬영</span>
+                    <QrCode size={20} />
+                    <span>{isDownloading ? "생성 중..." : "QR 코드"}</span>
                   </button>
                 </div>
               </div>
@@ -687,6 +820,52 @@ function App() {
           )}
         </div>
       </div>
+
+      {/* QR 코드 모달 */}
+      {showQR && downloadUrl && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div
+            className={`p-6 rounded-2xl shadow-xl border ${
+              isDarkMode
+                ? "bg-purple-900/90 backdrop-blur-sm border-purple-500/30"
+                : "bg-white/90 backdrop-blur-sm border-pink-200"
+            }`}
+          >
+            <div className="flex flex-col items-center gap-4">
+              <h3
+                className={`text-xl font-semibold ${
+                  isDarkMode ? "text-white" : "text-gray-900"
+                }`}
+              >
+                QR 코드로 다운로드
+              </h3>
+              <div className="p-4 bg-white rounded-xl">
+                <QRCodeSVG value={downloadUrl} size={200} />
+              </div>
+              <p
+                className={`text-sm ${
+                  isDarkMode ? "text-gray-300" : "text-gray-600"
+                }`}
+              >
+                QR 코드를 스캔하여 이미지를 다운로드하세요
+              </p>
+              <button
+                onClick={() => {
+                  setShowQR(false);
+                  URL.revokeObjectURL(downloadUrl);
+                }}
+                className={`px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 ${
+                  isDarkMode
+                    ? "bg-purple-500 text-white hover:bg-purple-600"
+                    : "bg-pink-500 text-white hover:bg-pink-600"
+                }`}
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
