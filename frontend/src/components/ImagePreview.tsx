@@ -17,7 +17,7 @@ export default function ImagePreview() {
     const fetchImageData = async () => {
       try {
         const response = await fetch(
-          `http://localhost:3001/api/file/${fileId}`
+          `${window.location.protocol}//${window.location.hostname}/api/file/${fileId}`
         );
         if (!response.ok) {
           throw new Error("이미지를 찾을 수 없습니다.");
