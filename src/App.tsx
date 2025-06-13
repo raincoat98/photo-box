@@ -111,11 +111,23 @@ function App() {
           reader.readAsDataURL(compressedFile);
           reader.onloadend = () => {
             const base64data = reader.result as string;
-            setPhotos((prev) => [...prev, base64data]);
+            setPhotos((prev) => {
+              // 최대 사진 개수를 초과하지 않도록 체크
+              if (prev.length >= selectedTemplate.maxPhotos) {
+                return prev;
+              }
+              return [...prev, base64data];
+            });
           };
         } catch (error) {
           console.error("Error processing image:", error);
-          setPhotos((prev) => [...prev, imageSrc]);
+          setPhotos((prev) => {
+            // 최대 사진 개수를 초과하지 않도록 체크
+            if (prev.length >= selectedTemplate.maxPhotos) {
+              return prev;
+            }
+            return [...prev, imageSrc];
+          });
         }
       }
     }
@@ -577,6 +589,17 @@ function App() {
                   >
                     <Download size={18} />
                     <span>결과 다운로드</span>
+                  </button>
+                  <button
+                    onClick={resetPhotos}
+                    className={`flex-1 px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 ${
+                      isDarkMode
+                        ? "bg-purple-500 text-white shadow-lg shadow-purple-500/20"
+                        : "bg-pink-100 text-pink-600 hover:bg-pink-200"
+                    }`}
+                  >
+                    <Camera size={18} />
+                    <span>다시 촬영</span>
                   </button>
                 </div>
               </div>
