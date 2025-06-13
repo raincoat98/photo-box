@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import Webcam from "react-webcam";
-import { Camera, Download, RefreshCcw, Layout, Timer } from "lucide-react";
+import { Camera, Download, Layout, Timer, Sun, Moon } from "lucide-react";
 import * as htmlToImage from "html-to-image";
 import imageCompression from "browser-image-compression";
-import frameBG from "./assets/frame/bg.png";
+import frameBG from "./assets/frame/bg.jpg";
 
 const backgrounds = [
   "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?q=80&w=800&auto=format&fit=crop",
@@ -36,6 +36,8 @@ const templates = [
     id: "frame-vertical-3cut",
     name: "프레임 3컷 세로",
     frameUrl: frameBG,
+    width: 200,
+    height: 600,
     maxPhotos: 3,
     photoPositions: [
       { top: 0.1, left: 0.1, width: 0.8, height: 0.22 },
@@ -52,9 +54,36 @@ function App() {
   const [timer, setTimer] = useState<number | null>(null);
   const [continuousMode, setContinuousMode] = useState(false);
   const [continuousInterval, setContinuousInterval] = useState(3);
+  const [resolution, setResolution] = useState<"low" | "medium" | "high">(
+    "high"
+  );
+  const [isDarkMode, setIsDarkMode] = useState(true);
   const webcamRef = useRef<Webcam>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const [frameSize, setFrameSize] = useState({ width: 0, height: 0 });
+
+  const getPhotoAspectRatio = useCallback(() => {
+    if (
+      selectedTemplate.photoPositions &&
+      selectedTemplate.photoPositions.length > 0
+    ) {
+      const pos = selectedTemplate.photoPositions[0];
+      const photoWidth = pos.width * (selectedTemplate.width || 200);
+      const photoHeight = pos.height * (selectedTemplate.height || 600);
+      return photoWidth / photoHeight;
+    } else if (selectedTemplate.itemStyle) {
+      const match = selectedTemplate.itemStyle.match(/aspect-\[(\d+)\/(\d+)\]/);
+      if (match) {
+        return Number(match[1]) / Number(match[2]);
+      }
+    }
+    return 1 / 3;
+  }, [
+    selectedTemplate.photoPositions,
+    selectedTemplate.itemStyle,
+    selectedTemplate.width,
+    selectedTemplate.height,
+  ]);
 
   const capture = useCallback(async () => {
     if (webcamRef.current && photos.length < selectedTemplate.maxPhotos) {
@@ -147,14 +176,26 @@ function App() {
       return;
     }
 
+    const resolutionMultiplier = {
+      low: 3,
+      medium: 5,
+      high: 10,
+    }[resolution];
+
     htmlToImage
       .toPng(resultRef.current, {
         quality: 1.0,
-        pixelRatio: 2,
+        pixelRatio: resolutionMultiplier,
         style: {
           transform: "scale(1)",
           transformOrigin: "top left",
         },
+        width: selectedTemplate.width
+          ? selectedTemplate.width * resolutionMultiplier
+          : undefined,
+        height: selectedTemplate.height
+          ? selectedTemplate.height * resolutionMultiplier
+          : undefined,
       })
       .then(async (dataUrl) => {
         try {
@@ -205,35 +246,84 @@ function App() {
   }, [selectedTemplate.frameUrl]);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
-      <div className="max-w-6xl mx-auto flex flex-row gap-8">
+    <div
+      className={`min-h-screen p-8 transition-all duration-500 ${
+        isDarkMode
+          ? "bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900"
+          : "bg-gradient-to-br from-pink-100 via-purple-100 to-indigo-100"
+      }`}
+    >
+      <div className="max-w-5xl mx-auto flex flex-row gap-8">
         {/* 왼쪽: 메인(카메라/결과) */}
         <div className="flex-1 flex flex-col gap-8">
-          <h1 className="text-3xl font-bold text-center mb-8">포토 부스</h1>
+          <div className="flex justify-between items-center mb-8">
+            <div className="relative group">
+              <h1
+                className={`text-4xl font-bold text-center transition-all duration-500 animate-fade-in relative z-10 flex flex-col items-center gap-2 ${
+                  isDarkMode ? "text-white" : "text-gray-900"
+                }`}
+              >
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500">
+                  포토 부스
+                </span>
+                <span className="text-sm text-gray-500">
+                  당신의 소중한 순간을 담아보세요
+                </span>
+                <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-lg blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+              </h1>
+              <div className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></div>
+            </div>
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className={`p-2 rounded-full transition-all duration-500 hover:scale-110 ${
+                isDarkMode
+                  ? "bg-purple-500/20 text-yellow-400 hover:bg-purple-500/30"
+                  : "bg-pink-500/20 text-pink-600 hover:bg-pink-500/30"
+              }`}
+            >
+              {isDarkMode ? <Sun size={24} /> : <Moon size={24} />}
+            </button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Camera Section */}
-            <div className="bg-white p-6 rounded-lg shadow-lg">
+            <div
+              className={`p-6 rounded-2xl shadow-xl border transition-all duration-500 hover:shadow-2xl ${
+                isDarkMode
+                  ? "bg-purple-900/30 backdrop-blur-sm border-purple-500/30"
+                  : "bg-white/80 backdrop-blur-sm border-pink-200"
+              }`}
+            >
               <div className="mb-4 flex flex-wrap justify-center gap-4">
                 <button
                   onClick={() => setContinuousMode(!continuousMode)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 ${
                     continuousMode
-                      ? "bg-green-500 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      ? "bg-pink-500 text-white shadow-lg shadow-pink-500/20"
+                      : isDarkMode
+                      ? "bg-purple-500/20 text-purple-200 hover:bg-purple-500/30"
+                      : "bg-pink-100 text-pink-600 hover:bg-pink-200"
                   }`}
                 >
                   <Camera size={18} />
                   연속 촬영
                 </button>
                 {continuousMode && (
-                  <div className="flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-full">
+                  <div
+                    className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 ${
+                      isDarkMode
+                        ? "bg-purple-500/20 text-purple-200"
+                        : "bg-pink-100 text-pink-600"
+                    }`}
+                  >
                     <Timer size={16} />
                     <select
                       value={continuousInterval}
                       onChange={(e) =>
                         setContinuousInterval(Number(e.target.value))
                       }
-                      className="bg-transparent border-none focus:ring-0 text-sm"
+                      className={`bg-transparent border-none focus:ring-0 text-sm ${
+                        isDarkMode ? "text-purple-200" : "text-pink-600"
+                      }`}
                     >
                       <option value={2}>2초 간격</option>
                       <option value={3}>3초 간격</option>
@@ -247,38 +337,58 @@ function App() {
                   audio={false}
                   ref={webcamRef}
                   screenshotFormat="image/png"
-                  className="w-full rounded-lg"
+                  className="w-full rounded-xl shadow-lg transition-all duration-500 hover:shadow-2xl"
                   videoConstraints={{
-                    width: { ideal: 3840 },
-                    height: { ideal: 2160 },
+                    width: {
+                      ideal:
+                        selectedTemplate.id === "vertical-strip" ? 200 : 300,
+                    },
+                    height: {
+                      ideal:
+                        selectedTemplate.id === "vertical-strip" ? 600 : 400,
+                    },
                     facingMode: "user",
-                    aspectRatio: 1.777777778,
+                    aspectRatio: getPhotoAspectRatio(),
                   }}
                   style={{
                     objectFit: "cover",
                     imageRendering: "crisp-edges",
+                    aspectRatio: getPhotoAspectRatio(),
+                    maxWidth:
+                      selectedTemplate.id === "vertical-strip"
+                        ? "200px"
+                        : "300px",
+                    maxHeight:
+                      selectedTemplate.id === "vertical-strip"
+                        ? "600px"
+                        : "400px",
+                    margin: "0 auto",
                   }}
                 />
                 {timer !== null && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                    <span className="text-white text-7xl font-bold">
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm rounded-xl animate-pulse">
+                    <span className="text-white text-7xl font-bold animate-bounce">
                       {timer}
                     </span>
                   </div>
                 )}
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2">
+                <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2">
                   <button
                     onClick={startTimer}
                     disabled={
                       photos.length >= selectedTemplate.maxPhotos ||
                       timer !== null
                     }
-                    className={`px-8 py-3 rounded-full shadow-lg transition-all flex items-center gap-2 ${
+                    className={`px-6 py-2 rounded-full shadow-lg transition-all duration-300 hover:scale-105 flex items-center gap-2 ${
                       photos.length >= selectedTemplate.maxPhotos
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        ? isDarkMode
+                          ? "bg-gray-700 text-gray-500 cursor-not-allowed"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
                         : timer !== null
-                        ? "bg-yellow-500 text-white"
-                        : "bg-blue-500 text-white hover:bg-blue-600"
+                        ? "bg-pink-500 text-white shadow-pink-500/20"
+                        : isDarkMode
+                        ? "bg-purple-500 text-white hover:bg-purple-600 shadow-purple-500/20"
+                        : "bg-pink-500 text-white hover:bg-pink-600 shadow-pink-500/20"
                     }`}
                   >
                     <Camera size={24} />
@@ -291,88 +401,99 @@ function App() {
             </div>
 
             {/* Result Section */}
-            <div className="bg-white p-6 rounded-lg shadow-lg">
+            <div
+              className={`p-6 rounded-2xl shadow-xl border transition-all duration-500 hover:shadow-2xl ${
+                isDarkMode
+                  ? "bg-purple-900/30 backdrop-blur-sm border-purple-500/30"
+                  : "bg-white/80 backdrop-blur-sm border-pink-200"
+              }`}
+            >
               {selectedTemplate.id === "frame-vertical-3cut" ? (
-                <div
-                  ref={resultRef}
-                  style={{
-                    width: frameSize.width || 320,
-                    height: frameSize.height || 800,
-                    position: "relative",
-                    background: "#fff",
-                    margin: "0 auto",
-                  }}
-                >
-                  {/* 배경 이미지 (맨 뒤) */}
-                  <img
-                    src={selectedBackground}
-                    alt="Background"
+                <div className="overflow-auto max-h-[800px]">
+                  <div
+                    ref={resultRef}
                     style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      zIndex: 0,
-                      opacity: 0.2,
+                      width: selectedTemplate.width || frameSize.width || 320,
+                      height:
+                        selectedTemplate.height || frameSize.height || 800,
+                      position: "relative",
+                      background: "#fff",
+                      margin: "0 auto",
+                      transform: "scale(1)",
+                      transformOrigin: "top center",
                     }}
-                  />
-                  {/* 사진들 (중간) */}
-                  {selectedTemplate.photoPositions?.map((pos, idx) => (
-                    <div
-                      key={idx}
+                  >
+                    {/* 배경 이미지 (맨 뒤) */}
+                    <img
+                      src={selectedBackground}
+                      alt="Background"
                       style={{
                         position: "absolute",
-                        top: `${pos.top * 100}%`,
-                        left: `${pos.left * 100}%`,
-                        width: `${pos.width * 100}%`,
-                        height: `${pos.height * 100}%`,
-                        borderRadius: 16,
-                        overflow: "hidden",
-                        background: "#eee",
-                        zIndex: 11,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                        zIndex: 0,
+                        opacity: 0.2,
                       }}
-                    >
-                      {photos[idx] ? (
-                        <img
-                          src={photos[idx]}
-                          alt={`Photo ${idx + 1}`}
-                          style={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                          }}
-                        />
-                      ) : (
-                        <span style={{ color: "#bbb", fontSize: 18 }}>
-                          사진 {idx + 1}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                  {/* 프레임 오버레이 (맨 위) */}
-                  <img
-                    src={selectedTemplate.frameUrl}
-                    alt="frame"
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: "100%",
-                      pointerEvents: "none",
-                      zIndex: 10,
-                    }}
-                  />
+                    />
+                    {/* 사진들 (중간) */}
+                    {selectedTemplate.photoPositions?.map((pos, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          position: "absolute",
+                          top: `${pos.top * 100}%`,
+                          left: `${pos.left * 100}%`,
+                          width: `${pos.width * 100}%`,
+                          height: `${pos.height * 100}%`,
+                          borderRadius: 16,
+                          overflow: "hidden",
+                          background: "#eee",
+                          zIndex: 11,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {photos[idx] ? (
+                          <img
+                            src={photos[idx]}
+                            alt={`Photo ${idx + 1}`}
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                            }}
+                          />
+                        ) : (
+                          <span style={{ color: "#bbb", fontSize: 18 }}>
+                            사진 {idx + 1}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                    {/* 프레임 오버레이 (맨 위) */}
+                    <img
+                      src={selectedTemplate.frameUrl}
+                      alt="frame"
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: "100%",
+                        pointerEvents: "none",
+                        zIndex: 10,
+                      }}
+                    />
+                  </div>
                 </div>
               ) : (
                 <div
                   ref={resultRef}
-                  className="relative bg-white rounded-lg overflow-hidden"
+                  className="relative bg-white rounded-xl overflow-hidden shadow-lg"
                   style={{ minHeight: "400px" }}
                 >
                   <img
@@ -384,7 +505,7 @@ function App() {
                     {[...Array(selectedTemplate.maxPhotos)].map((_, index) => (
                       <div
                         key={index}
-                        className={`${selectedTemplate.itemStyle} bg-gray-200 rounded-lg overflow-hidden`}
+                        className={`${selectedTemplate.itemStyle} bg-gray-200 rounded-xl overflow-hidden`}
                       >
                         {photos[index] ? (
                           <img
@@ -406,25 +527,58 @@ function App() {
                   </div>
                 </div>
               )}
-
-              <div className="mt-4 flex gap-4">
-                <button
-                  onClick={resetPhotos}
-                  className="flex-1 bg-red-500 text-white px-6 py-3 rounded-full hover:bg-red-600 transition-all flex items-center justify-center gap-2"
-                >
-                  <RefreshCcw size={20} /> 초기화
-                </button>
-                <button
-                  onClick={downloadResult}
-                  disabled={photos.length < selectedTemplate.maxPhotos}
-                  className={`flex-1 px-6 py-3 rounded-full transition-all flex items-center justify-center gap-2 ${
-                    photos.length < selectedTemplate.maxPhotos
-                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      : "bg-green-500 text-white hover:bg-green-600"
-                  }`}
-                >
-                  <Download size={20} /> 다운로드
-                </button>
+              <div className="mt-4 flex flex-col gap-4">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setResolution("low")}
+                    className={`flex-1 px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 ${
+                      resolution === "low"
+                        ? "bg-pink-500 text-white shadow-lg shadow-pink-500/20"
+                        : isDarkMode
+                        ? "bg-purple-500/20 text-purple-200 hover:bg-purple-500/30"
+                        : "bg-pink-100 text-pink-600 hover:bg-pink-200"
+                    }`}
+                  >
+                    저해상도
+                  </button>
+                  <button
+                    onClick={() => setResolution("medium")}
+                    className={`flex-1 px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 ${
+                      resolution === "medium"
+                        ? "bg-pink-500 text-white shadow-lg shadow-pink-500/20"
+                        : isDarkMode
+                        ? "bg-purple-500/20 text-purple-200 hover:bg-purple-500/30"
+                        : "bg-pink-100 text-pink-600 hover:bg-pink-200"
+                    }`}
+                  >
+                    중해상도
+                  </button>
+                  <button
+                    onClick={() => setResolution("high")}
+                    className={`flex-1 px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 ${
+                      resolution === "high"
+                        ? "bg-pink-500 text-white shadow-lg shadow-pink-500/20"
+                        : isDarkMode
+                        ? "bg-purple-500/20 text-purple-200 hover:bg-purple-500/30"
+                        : "bg-pink-100 text-pink-600 hover:bg-pink-200"
+                    }`}
+                  >
+                    고해상도
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={downloadResult}
+                    className={`flex-1 px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 flex items-center justify-center gap-2 ${
+                      isDarkMode
+                        ? "bg-purple-500 text-white shadow-lg shadow-purple-500/20"
+                        : "bg-pink-100 text-pink-600 hover:bg-pink-200"
+                    }`}
+                  >
+                    <Download size={18} />
+                    <span>결과 다운로드</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -432,8 +586,18 @@ function App() {
         {/* 오른쪽: 사이드바(템플릿/배경 선택) */}
         <div className="w-64 flex flex-col gap-6 sticky top-8 self-start">
           {/* Template Selection */}
-          <div className="bg-white p-4 rounded-lg shadow-lg">
-            <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
+          <div
+            className={`p-4 rounded-2xl shadow-xl border transition-all duration-500 hover:shadow-2xl ${
+              isDarkMode
+                ? "bg-purple-900/30 backdrop-blur-sm border-purple-500/30"
+                : "bg-white/80 backdrop-blur-sm border-pink-200"
+            }`}
+          >
+            <h2
+              className={`text-lg font-semibold mb-2 flex items-center gap-2 ${
+                isDarkMode ? "text-white" : "text-gray-900"
+              }`}
+            >
               <Layout size={20} /> 템플릿
             </h2>
             <div className="grid grid-cols-2 gap-2">
@@ -444,10 +608,14 @@ function App() {
                     setSelectedTemplate(template);
                     setPhotos([]);
                   }}
-                  className={`p-2 rounded border text-xs transition-all ${
+                  className={`p-2 rounded-xl border text-xs transition-all duration-300 hover:scale-105 ${
                     selectedTemplate.id === template.id
-                      ? "border-blue-500 bg-blue-50 shadow"
-                      : "border-gray-200 hover:border-blue-300"
+                      ? isDarkMode
+                        ? "border-purple-400 bg-purple-400/20 text-white shadow-lg shadow-purple-400/20"
+                        : "border-pink-500 bg-pink-500/10 text-pink-500 shadow-lg shadow-pink-500/20"
+                      : isDarkMode
+                      ? "border-purple-500/30 text-purple-200 hover:border-purple-400 hover:bg-purple-400/10"
+                      : "border-pink-200 text-pink-600 hover:border-pink-500 hover:bg-pink-50"
                   }`}
                 >
                   {template.name}
@@ -456,28 +624,44 @@ function App() {
             </div>
           </div>
           {/* Background Selection */}
-          <div className="bg-white p-4 rounded-lg shadow-lg">
-            <h2 className="text-lg font-semibold mb-2">배경</h2>
-            <div className="grid grid-cols-1 gap-2">
-              {backgrounds.map((bg, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedBackground(bg)}
-                  className={`rounded-lg overflow-hidden border-2 transition-all w-full aspect-video ${
-                    selectedBackground === bg
-                      ? "border-blue-500 shadow"
-                      : "border-gray-200 hover:border-blue-300"
-                  }`}
-                >
-                  <img
-                    src={bg}
-                    alt={`Background ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              ))}
+          {!selectedTemplate.frameUrl && (
+            <div
+              className={`p-4 rounded-2xl shadow-xl border transition-all duration-500 hover:shadow-2xl ${
+                isDarkMode
+                  ? "bg-purple-900/30 backdrop-blur-sm border-purple-500/30"
+                  : "bg-white/80 backdrop-blur-sm border-pink-200"
+              }`}
+            >
+              <h2
+                className={`text-lg font-semibold mb-2 ${
+                  isDarkMode ? "text-white" : "text-gray-900"
+                }`}
+              >
+                배경
+              </h2>
+              <div className="grid grid-cols-1 gap-2">
+                {backgrounds.map((bg, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedBackground(bg)}
+                    className={`rounded-xl overflow-hidden border-2 transition-all duration-300 hover:scale-105 w-full aspect-video ${
+                      selectedBackground === bg
+                        ? "border-pink-500 shadow-lg shadow-pink-500/20"
+                        : isDarkMode
+                        ? "border-purple-500/30 hover:border-purple-400"
+                        : "border-pink-200 hover:border-pink-500"
+                    }`}
+                  >
+                    <img
+                      src={bg}
+                      alt={`Background ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
