@@ -37,7 +37,7 @@ nano frontend/.env
 
 **프론트엔드 (frontend/.env)**:
 
-- `VITE_API_BASE_URL`: 백엔드 API 서버 URL (기본값: http://localhost:4500)
+- `VITE_API_BASE_URL`: 백엔드 API 서버 URL (기본값: http://localhost:4600)
 
 ### 2. 도커 컴포즈로 실행
 
@@ -52,7 +52,7 @@ docker-compose -f docker-compose.prod.yml up -d --build
 ### 3. 서비스 접속
 
 - **Frontend**: http://localhost:4501
-- **Backend API**: http://localhost:4500
+- **Backend API**: http://localhost:4600
 
 ### 4. 서비스 관리
 
@@ -129,14 +129,14 @@ docker build -t photo-box-backend ./backend
 docker run -p 4501:80 photo-box-frontend
 
 # Backend 실행
-docker run -p 4500:4500 --env-file backend/.env photo-box-backend
+docker run -p 4600:4600 --env-file backend/.env photo-box-backend
 ```
 
 ## 문제 해결
 
 ### 포트 충돌
 
-포트 4500이나 4501이 이미 사용 중인 경우 docker-compose.prod.yml에서 포트를 변경하세요.
+포트 4600이나 4501이 이미 사용 중인 경우 docker-compose.prod.yml에서 포트를 변경하세요.
 
 ### 환경변수 문제
 

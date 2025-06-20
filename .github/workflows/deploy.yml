@@ -64,36 +64,40 @@ jobs:
             exit 1
           fi
 
+      - name: Deploy environment file (.env) to Synology
+        env:
+          SYNOLOGY_HOST: ${{ secrets.SYNOLOGY_HOST }}
+          SYNOLOGY_USERNAME: ${{ secrets.SYNOLOGY_USERNAME }}
+          SYNOLOGY_PASSWORD: ${{ secrets.SYNOLOGY_PASSWORD }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          RSYNC_PORT: ${{ secrets.RSYNC_PORT }}
+          PROD_ENV: ${{ secrets.PROD_ENV }}
+        run: |
+          echo "🛠️ .env 내용 준비 중..."
 
-          echo "😎 환경 설정 파일 배포 시작..."
+          # .env 내용을 로컬에 저장
+          echo "$PROD_ENV" > .env
 
-          # 환경 설정 파일 생성 및 배포
-          pushd frontend && echo "${{ secrets.FRONTEND_ENV }}" > .env.production && popd
-          pushd backend && echo "${{ secrets.BACKEND_ENV }}" > .env.production && popd
+          echo "📁 .env 파일 배포 시작..."
 
-          # rsync를 사용하여 환경 설정 파일 배포 (재시도 로직 추가)
-          for file in "frontend/.env.production:frontend/.env.production" "backend/.env.production:backend/.env.production"; do
-            src=${file%%:*}
-            dest=${file#*:}
-            dest_dir=$(dirname "$DEPLOY_PATH/$dest")
-            attempt=1
-            while [ $attempt -le $max_attempts ]; do
-              if rsync -avz --timeout=60 -e "sshpass -p $SYNOLOGY_PASSWORD ssh -p $RSYNC_PORT" \
-                "$src" "$SYNOLOGY_USERNAME@$SYNOLOGY_HOST:$DEPLOY_PATH/$dest"; then
-                break
-              fi
-              echo "rsync 시도 $attempt 실패. 재시도 중..."
-              sleep 5
-              attempt=$((attempt + 1))
-            done
-            if [ $attempt -gt $max_attempts ]; then
-              echo "rsync 실패: 최대 재시도 횟수 초과"
-              exit 1
+          max_attempts=3
+          attempt=1
+
+          while [ $attempt -le $max_attempts ]; do
+            if rsync -avz --timeout=60 -e "sshpass -p $SYNOLOGY_PASSWORD ssh -p $RSYNC_PORT" \
+              .env "$SYNOLOGY_USERNAME@$SYNOLOGY_HOST:$DEPLOY_PATH/.env"; then
+              echo "✅ .env 파일 배포 완료"
+              break
             fi
+            echo "⚠️ rsync 시도 $attempt 실패. 재시도 중..."
+            sleep 5
+            attempt=$((attempt + 1))
           done
 
-          echo "모든 파일 배포 완료"
-
+          if [ $attempt -gt $max_attempts ]; then
+            echo "❌ .env 배포 실패: 최대 재시도 횟수 초과"
+            exit 1
+          fi
       - name: Run Docker Compose on Synology NAS
         env:
           SYNOLOGY_HOST: ${{ secrets.SYNOLOGY_HOST }}

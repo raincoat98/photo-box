@@ -36,11 +36,11 @@ COPY . .
 RUN mkdir -p uploads temp
 
 # 포트 노출
-EXPOSE 4500
+EXPOSE 4600
 
 # 헬스체크 추가
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:4500/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" || exit 1
+  CMD node -e "require('http').get('http://localhost:4600/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" || exit 1
 
 # 애플리케이션 시작
 CMD ["node", "server.js"] 

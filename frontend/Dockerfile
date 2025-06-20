@@ -12,10 +12,6 @@ RUN npm ci --only=production=false
 # 소스 코드 복사
 COPY . .
 
-# 환경변수 설정 (빌드 시점에 필요)
-ARG VITE_API_BASE_URL=http://localhost:4501
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-
 # 빌드 실행
 RUN npm run build
 

@@ -17,7 +17,7 @@ export default function ImagePreview() {
     const fetchImageData = async () => {
       try {
         const apiBaseUrl =
-          import.meta.env.VITE_API_BASE_URL || "http://localhost:4500";
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:4600";
 
         const response = await fetch(`${apiBaseUrl}/api/file/${fileId}`);
         if (!response.ok) {
