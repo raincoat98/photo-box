@@ -21,6 +21,11 @@ async function uploadToNAS(localPath, remoteFileName) {
     // 파일 읽기
     const fileContent = fs.readFileSync(localPath);
     console.log("📁 파일 읽기 성공:", localPath);
+    console.log("🔧 MinIO 설정 확인:", {
+      endpoint: s3Client.config.endpoint,
+      bucketName: bucketName,
+      remotePath: remotePath,
+    });
 
     const command = new PutObjectCommand({
       Bucket: bucketName,
@@ -28,11 +33,20 @@ async function uploadToNAS(localPath, remoteFileName) {
       Body: fileContent,
     });
 
+    console.log("🚀 MinIO 업로드 시작...");
     await s3Client.send(command);
     console.log("✅ MinIO 업로드 성공:", remotePath);
     return remotePath;
   } catch (err) {
     console.error("❌ MinIO 업로드 실패:", err.message);
+    console.error("❌ 에러 상세 정보:", {
+      name: err.name,
+      code: err.code,
+      statusCode: err.$metadata?.httpStatusCode,
+      requestId: err.$metadata?.requestId,
+      endpoint: s3Client.config.endpoint,
+      bucketName: bucketName,
+    });
     if (err.code === "ENOENT") {
       console.error("파일이 존재하지 않습니다:", localPath);
     }

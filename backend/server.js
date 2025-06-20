@@ -6,7 +6,12 @@ const cors = require("cors");
 const { GetObjectCommand } = require("@aws-sdk/client-s3");
 const QRCode = require("qrcode");
 const { uploadToNAS } = require("./uploadToNAS");
-const { s3Client, bucketName } = require("./config/minio");
+const {
+  s3Client,
+  bucketName,
+  testMinIOConnection,
+  createBucketIfNotExists,
+} = require("./config/minio");
 require("dotenv").config();
 
 // 필수 환경변수 체크
@@ -24,10 +29,23 @@ requiredEnvVars.forEach((envVar) => {
 });
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 4600;
 const serverUrl = process.env.SERVER_URL || `http://localhost:${port}`;
 
-app.use(cors());
+// CORS 설정
+const corsOptions = {
+  origin: [
+    "http://localhost:4601",
+    "http://localhost:5173",
+    // 프로덕션 도메인 추가 가능
+  ],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // 임시 파일 저장을 위한 설정
@@ -49,6 +67,16 @@ const upload = multer({ storage: storage });
 // 임시 URL 저장소
 const tempUrls = new Map();
 
+// 헬스체크 엔드포인트
+app.get("/api/hello", (req, res) => {
+  res.status(200).json({ status: "OK", message: "Hello, World!" });
+});
+
+// 헬스체크 엔드포인트
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "OK", timestamp: new Date().toISOString() });
+});
+
 // 파일 업로드 엔드포인트
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   try {
@@ -57,6 +85,8 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     }
 
     const file = req.file;
+    console.log("📁 파일 업로드 시작:", file.filename);
+
     const remotePath = await uploadToNAS(file.path, file.filename);
 
     // 임시 파일 삭제
@@ -74,14 +104,24 @@ app.post("/api/upload", upload.single("file"), async (req, res) => {
     // QR 코드 생성
     const qrCode = await QRCode.toDataURL(previewUrl);
 
+    console.log("✅ 파일 업로드 완료:", fileId);
     res.json({
       url: previewUrl,
       qrCode,
       expiresAt: new Date(expiresAt).toISOString(),
     });
   } catch (error) {
-    console.error("Upload error:", error);
-    res.status(500).json({ error: "파일 업로드 실패" });
+    console.error("❌ Upload error:", error);
+    console.error("❌ Error details:", {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
+    res.status(500).json({
+      error: "파일 업로드 실패",
+      details: error.message,
+    });
   }
 });
 
@@ -155,6 +195,24 @@ setInterval(() => {
   }
 }, 60 * 60 * 1000);
 
-app.listen(port, () => {
+app.listen(port, async () => {
   console.log(`서버가 포트 ${port}에서 실행 중입니다.`);
+
+  // MinIO 연결 테스트
+  console.log("🔍 MinIO 연결 테스트 중...");
+  const isConnected = await testMinIOConnection();
+  if (!isConnected) {
+    console.warn(
+      "⚠️  MinIO 연결에 실패했습니다. 파일 업로드가 작동하지 않을 수 있습니다."
+    );
+  } else {
+    // MinIO 버킷 생성
+    console.log("📦 MinIO 버킷 확인/생성 중...");
+    const bucketCreated = await createBucketIfNotExists();
+    if (bucketCreated) {
+      console.log("✅ MinIO 설정이 완료되었습니다.");
+    } else {
+      console.warn("⚠️  MinIO 버킷 생성에 실패했습니다.");
+    }
+  }
 });

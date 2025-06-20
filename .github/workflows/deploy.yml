@@ -10,43 +10,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # 백엔드 빌드
-      - name: Setup Node.js for backend
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: "backend/package-lock.json"
-
-      - name: Install backend dependencies
-        working-directory: ./backend
-        run: npm ci
-
-      - name: Build backend
-        working-directory: ./backend
-        run: npm run build
-
-      # 프론트엔드 빌드
-      - name: Setup Node.js for frontend
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: "frontend/package-lock.json"
-
-      - name: Install frontend dependencies
-        working-directory: ./frontend
-        run: npm ci
-
-      - name: Build frontend
-        working-directory: ./frontend
-        run: npm run build
+      - name: Checkout code
+        uses: actions/checkout@v2
 
       - name: Install sshpass & rsync
         run: sudo apt-get install -y sshpass rsync
+
+      - name: Set up SSH config and keys
+        env:
+          SYNOLOGY_HOST: ${{ secrets.SYNOLOGY_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          RSYNC_PORT: ${{ secrets.RSYNC_PORT }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          cat <<EOF >> ~/.ssh/config
+          Host ${{ secrets.SYNOLOGY_HOST }}
+              HostName ${{ secrets.SYNOLOGY_HOST }}
+              Port ${{ secrets.SSH_PORT }}
+              StrictHostKeyChecking no
+          EOF
 
       - name: Deploy to Synology (using rsync)
         env:
@@ -55,17 +41,130 @@ jobs:
           SYNOLOGY_PASSWORD: ${{ secrets.SYNOLOGY_PASSWORD }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           RSYNC_PORT: ${{ secrets.RSYNC_PORT }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
         run: |
-          # 호스트 키 자동 신뢰 추가
-          mkdir -p ~/.ssh
-          ssh-keyscan -p $RSYNC_PORT $SYNOLOGY_HOST >> ~/.ssh/known_hosts
+          # rsync를 사용하여 프로젝트 파일 배포
+          max_attempts=3
+          attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            if rsync -avz --timeout=60 -e "sshpass -p $SYNOLOGY_PASSWORD ssh -p $RSYNC_PORT" \
+              --exclude '.git' \
+              --exclude 'node_modules' \
+              --exclude '.env*' \
+              ./ $SYNOLOGY_USERNAME@$SYNOLOGY_HOST:$DEPLOY_PATH; then
+              break
+            fi
+            echo "rsync 시도 $attempt 실패. 재시도 중..."
+            sleep 5
+            attempt=$((attempt + 1))
+          done
 
-          echo "Connecting to Synology server..."
+          if [ $attempt -gt $max_attempts ]; then
+            echo "rsync 실패: 최대 재시도 횟수 초과"
+            exit 1
+          fi
 
-          # 백엔드 배포
-          echo "Deploying backend..."
-          rsync -avz -e "sshpass -p $SYNOLOGY_PASSWORD ssh -p $RSYNC_PORT" backend/dist/ $SYNOLOGY_USERNAME@$SYNOLOGY_HOST:$DEPLOY_PATH/backend
 
-          # 프론트엔드 배포
-          echo "Deploying frontend..."
-          rsync -avz -e "sshpass -p $SYNOLOGY_PASSWORD ssh -p $RSYNC_PORT" frontend/dist/ $SYNOLOGY_USERNAME@$SYNOLOGY_HOST:$DEPLOY_PATH/frontend
+          echo "😎 환경 설정 파일 배포 시작..."
+
+          # 환경 설정 파일 생성 및 배포
+          pushd frontend && echo "${{ secrets.FRONTEND_ENV }}" > .env.production && popd
+          pushd backend && echo "${{ secrets.BACKEND_ENV }}" > .env.production && popd
+
+          # rsync를 사용하여 환경 설정 파일 배포 (재시도 로직 추가)
+          for file in "frontend/.env.production:frontend/.env.production" "backend/.env.production:backend/.env.production"; do
+            src=${file%%:*}
+            dest=${file#*:}
+            dest_dir=$(dirname "$DEPLOY_PATH/$dest")
+            attempt=1
+            while [ $attempt -le $max_attempts ]; do
+              if rsync -avz --timeout=60 -e "sshpass -p $SYNOLOGY_PASSWORD ssh -p $RSYNC_PORT" \
+                "$src" "$SYNOLOGY_USERNAME@$SYNOLOGY_HOST:$DEPLOY_PATH/$dest"; then
+                break
+              fi
+              echo "rsync 시도 $attempt 실패. 재시도 중..."
+              sleep 5
+              attempt=$((attempt + 1))
+            done
+            if [ $attempt -gt $max_attempts ]; then
+              echo "rsync 실패: 최대 재시도 횟수 초과"
+              exit 1
+            fi
+          done
+
+          echo "모든 파일 배포 완료"
+
+      - name: Run Docker Compose on Synology NAS
+        env:
+          SYNOLOGY_HOST: ${{ secrets.SYNOLOGY_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SYNOLOGY_USERNAME: ${{ secrets.SYNOLOGY_USERNAME }}
+          SYNOLOGY_PASSWORD: ${{ secrets.SYNOLOGY_PASSWORD }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          shell: /usr/bin/bash -e {0}
+        run: |
+          max_attempts=5
+          attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            if sshpass -p "${{ secrets.SYNOLOGY_PASSWORD }}" ssh -T -p $SSH_PORT ${{ secrets.SYNOLOGY_USERNAME }}@${{ secrets.SYNOLOGY_HOST }} << 'EOSSH'
+              echo "🔄 Docker 배포 스크립트 실행 시작..."
+
+              # 루트 권한으로 스크립트 실행
+              echo "${{ secrets.SYNOLOGY_PASSWORD }}" | sudo -S bash -c '
+              cd "${{ secrets.DEPLOY_PATH }}"
+
+              # Docker가 설치되어 있는지 확인
+              if ! command -v docker &> /dev/null; then
+                echo "🚀 Docker가 설치되지 않았습니다. 설치를 진행합니다."
+                
+                # Synology 패키지 센터를 통해 Docker 설치
+                synopkg install Docker || { echo "❌ Docker 설치 실패"; exit 1; }
+
+                echo "✅ Docker 설치 완료"
+              else
+                echo "✅ Docker가 이미 설치되어 있습니다."
+              fi
+
+              # Docker 서비스 시작
+              echo "🚀 Docker 서비스 시작 및 활성화 중..."
+              systemctl start docker
+              systemctl enable docker
+              echo "✅ Docker 서비스 실행 완료"
+
+              # Docker Compose 설치 확인
+              if ! command -v docker-compose &> /dev/null; then
+                echo "🚀 Docker Compose가 설치되지 않았습니다. 설치를 진행합니다."
+                curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
+                  -o /usr/local/bin/docker-compose
+                chmod +x /usr/local/bin/docker-compose
+                echo "✅ Docker Compose 설치 완료"
+              fi
+
+              # docker-compose.yml 파일 존재 확인
+              if [ ! -f "docker-compose.prod.yml" ]; then
+                echo "❌ 오류: docker-compose.prod.yml 파일이 없습니다!"
+                ls -al
+                exit 1
+              fi
+
+              chmod +x deploy.sh && ./deploy.sh
+              
+              echo "✅ 컨테이너 상태 확인"
+              docker-compose -f docker-compose.prod.yml ps || true
+              
+              echo "📜 최근 컨테이너 로그 출력"
+              docker-compose -f docker-compose.prod.yml logs --tail=50 || true
+              '
+          EOSSH
+            then
+              break
+            fi
+            echo "⚠️ SSH 연결 시도 $attempt 실패. 재시도 중..."
+            sleep 5
+            attempt=$((attempt + 1))
+          done
+
+          if [ $attempt -gt $max_attempts ]; then
+            echo "❌ SSH 연결 실패: 최대 재시도 횟수 초과"
+            exit 1
+          fi

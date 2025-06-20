@@ -16,9 +16,10 @@ export default function ImagePreview() {
   useEffect(() => {
     const fetchImageData = async () => {
       try {
-        const response = await fetch(
-          `${window.location.protocol}//${window.location.hostname}/api/file/${fileId}`
-        );
+        const apiBaseUrl =
+          import.meta.env.VITE_API_BASE_URL || "http://localhost:4500";
+
+        const response = await fetch(`${apiBaseUrl}/api/file/${fileId}`);
         if (!response.ok) {
           throw new Error("이미지를 찾을 수 없습니다.");
         }

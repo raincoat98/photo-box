@@ -16,6 +16,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import ImagePreview from "./components/ImagePreview";
 import QRCodeGenerator from "./components/QRCodeGenerator";
 import { QRCodeSVG } from "qrcode.react";
+import { API_ENDPOINTS } from "./config";
 
 const backgrounds = [
   "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?q=80&w=800&auto=format&fit=crop",
@@ -305,13 +306,14 @@ function App() {
     formData.append("file", file);
 
     try {
-      const response = await fetch("http://localhost:3001/api/upload", {
+      const response = await fetch(API_ENDPOINTS.UPLOAD, {
         method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error("업로드 실패");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.details || "업로드 실패");
       }
 
       const data = await response.json();
@@ -319,7 +321,9 @@ function App() {
       setShowQR(true);
     } catch (error) {
       console.error("Upload error:", error);
-      alert("파일 업로드에 실패했습니다.");
+      setUploadError(
+        error instanceof Error ? error.message : "파일 업로드에 실패했습니다."
+      );
     }
   };
 
