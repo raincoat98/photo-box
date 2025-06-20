@@ -37,6 +37,7 @@ const corsOptions = {
   origin: [
     "http://localhost:4601",
     "http://localhost:5173",
+    "https://photo-box.kingwook.com",
     // 프로덕션 도메인 추가 가능
   ],
   credentials: true,
