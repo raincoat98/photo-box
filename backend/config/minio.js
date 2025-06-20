@@ -10,8 +10,8 @@ const config = {
   endpoint: process.env.MINIO_ENDPOINT
     ? `http://${process.env.MINIO_ENDPOINT}:${process.env.MINIO_PORT || 4610}`
     : "http://minio:4610",
-  accessKey: process.env.MINIO_ACCESS_KEY || "photoadmin",
-  secretKey: process.env.MINIO_SECRET_KEY || "photo123456",
+  accessKey: process.env.MINIO_ROOT_USER || "photoadmin",
+  secretKey: process.env.MINIO_ROOT_PASSWORD || "photo123456",
   bucketName: process.env.MINIO_BUCKET_NAME || "photo-box",
 };
 

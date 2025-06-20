@@ -3,13 +3,14 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL}
     ports:
       - "4601:80"
     depends_on:
       - backend
-    env_file:
-      - .env
     environment:
+      - NODE_ENV=${NODE_ENV}
       - VITE_API_BASE_URL=${VITE_API_BASE_URL}
     networks:
       - photo-network
@@ -22,14 +23,21 @@ services:
       target: production
     ports:
       - "${PORT}:${PORT}"
-    env_file:
-      - .env
     depends_on:
       minio:
         condition: service_healthy
     volumes:
       - backend-uploads:/app/uploads
       - backend-temp:/app/temp
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - PORT=${PORT}
+      - SERVER_URL=${SERVER_URL}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
+      - MINIO_PORT=${MINIO_PORT}
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME}
     networks:
       - photo-network
     restart: unless-stopped
@@ -39,11 +47,10 @@ services:
     ports:
       - "${MINIO_PORT}:${MINIO_PORT}"
       - "4620:4620"
-    env_file:
-      - .env
     environment:
-      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY}
-      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_BROWSER_REDIRECT=false
     volumes:
       - minio-data:/data
     command: server /data --console-address ":4620" --address ":${MINIO_PORT}"
@@ -51,7 +58,13 @@ services:
       - photo-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "http://localhost:${MINIO_PORT}/minio/health/live",
+        ]
       interval: 30s
       timeout: 20s
       retries: 3
@@ -62,23 +75,25 @@ services:
     depends_on:
       minio:
         condition: service_healthy
-    env_file:
-      - .env
     entrypoint: >
       /bin/sh -c "
-        mc alias set myminio http://minio:${MINIO_PORT} $${MINIO_ACCESS_KEY} $${MINIO_SECRET_KEY} &&
+        mc alias set myminio http://minio:${MINIO_PORT} $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
         mc mb myminio/${MINIO_BUCKET_NAME} --ignore-existing &&
         echo '✅ MinIO bucket created successfully';
       "
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME}
+      - MINIO_PORT=${MINIO_PORT}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT}
     networks:
       - photo-network
     restart: "no"
-
+networks:
+  photo-network:
+    driver: bridge
 volumes:
   backend-uploads:
   backend-temp:
   minio-data:
-
-networks:
-  photo-network:
-    driver: bridge
