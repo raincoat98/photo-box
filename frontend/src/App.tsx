@@ -16,7 +16,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import ImagePreview from "./components/ImagePreview";
 import QRCodeGenerator from "./components/QRCodeGenerator";
 import { QRCodeSVG } from "qrcode.react";
-import { API_ENDPOINTS } from "./config";
+import { API_ENDPOINTS, API_BASE_URL } from "./config";
 
 const backgrounds = [
   "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?q=80&w=800&auto=format&fit=crop",
@@ -304,6 +304,8 @@ function App() {
   const handleUpload = async (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
+
+    console.log(API_BASE_URL);
 
     try {
       const response = await fetch(API_ENDPOINTS.UPLOAD, {

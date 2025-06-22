@@ -30,7 +30,7 @@ requiredEnvVars.forEach((envVar) => {
 
 const app = express();
 const port = process.env.PORT || 4600;
-const serverUrl = process.env.SERVER_URL || `http://localhost:${port}`;
+const serverUrl = process.env.SERVER_URL;
 
 // CORS 설정
 const corsOptions = {
