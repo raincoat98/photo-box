@@ -7,9 +7,7 @@ const {
 
 // 환경변수 기본값 설정
 const config = {
-  endpoint: process.env.MINIO_ENDPOINT
-    ? `http://${process.env.MINIO_ENDPOINT}:${process.env.MINIO_PORT || 4610}`
-    : "http://minio:4610",
+  endpoint: process.env.MINIO_ENDPOINT || "http://minio:4610",
   accessKey: process.env.MINIO_ROOT_USER || "photoadmin",
   secretKey: process.env.MINIO_ROOT_PASSWORD || "photo123456",
   bucketName: process.env.MINIO_BUCKET_NAME || "photo-box",
