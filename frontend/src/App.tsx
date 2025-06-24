@@ -416,7 +416,7 @@ function App() {
                 isDarkMode ? "bg-gray-900" : "bg-gray-100"
               }`}
             >
-              <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 pt-8 px-4">
+              <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 pt-8 pb-8 px-4">
                 {/* 왼쪽: 메인(카메라/결과) */}
                 <div className="flex-1 flex flex-col gap-8">
                   <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
