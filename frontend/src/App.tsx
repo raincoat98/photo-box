@@ -21,6 +21,8 @@ import { API_ENDPOINTS, API_BASE_URL } from "./config";
 const backgrounds = [
   "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?q=80&w=800&auto=format&fit=crop",
   "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=800&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=800&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=800&auto=format&fit=crop",
 ];
 
 const templates = [
@@ -620,7 +622,7 @@ function App() {
                                 height: "100%",
                                 objectFit: "cover",
                                 zIndex: 0,
-                                opacity: 0.2,
+                                opacity: 0.4,
                               }}
                             />
                             {/* 사진들 (중간) */}
@@ -688,7 +690,7 @@ function App() {
                           <img
                             src={selectedBackground}
                             alt="Background"
-                            className="w-full h-full absolute top-0 left-0 object-cover opacity-20"
+                            className="w-full h-full absolute top-0 left-0 object-cover opacity-50"
                           />
                           <div
                             className={`relative z-10 ${selectedTemplate.layout}`}
