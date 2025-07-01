@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import Webcam from "react-webcam";
 import {
   Camera,
@@ -12,6 +12,7 @@ import {
 import * as htmlToImage from "html-to-image";
 import imageCompression from "browser-image-compression";
 import frameBG from "./assets/frame/bg.jpg";
+import frameBG2 from "./assets/frame/bg2.jpg";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import ImagePreview from "./components/ImagePreview";
 import QRCodeGenerator from "./components/QRCodeGenerator";
@@ -60,6 +61,19 @@ const templates = [
       { top: 0.56, left: 0.1, width: 0.8, height: 0.22 },
     ],
   },
+  {
+    id: "frame-vertical-3cut",
+    name: "프레임 3컷 세로2",
+    frameUrl: frameBG2,
+    width: 200,
+    height: 600,
+    maxPhotos: 3,
+    photoPositions: [
+      { top: 0.1, left: 0.1, width: 0.8, height: 0.22 },
+      { top: 0.33, left: 0.1, width: 0.8, height: 0.22 },
+      { top: 0.56, left: 0.1, width: 0.8, height: 0.22 },
+    ],
+  },
 ];
 
 interface UploadedFile {
@@ -85,7 +99,7 @@ function App() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [, setDownloadUrl] = useState<string | null>(null);
   const [showCurrentUrlQR, setShowCurrentUrlQR] = useState(false);
   const webcamRef = useRef<Webcam>(null);
   const resultRef = useRef<HTMLDivElement>(null);
