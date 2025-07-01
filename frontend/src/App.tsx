@@ -26,7 +26,30 @@ const backgrounds = [
   "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=800&auto=format&fit=crop",
 ];
 
-const templates = [
+interface Template {
+  id: string;
+  name: string;
+  layout: string;
+  itemStyle: string;
+  maxPhotos: number;
+}
+
+interface FrameTemplate {
+  id: string;
+  name: string;
+  frameUrl: string;
+  width: number;
+  height: number;
+  maxPhotos: number;
+  photoPositions: Array<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  }>;
+}
+
+const templates: Template[] = [
   {
     id: "grid",
     name: "2x2 Grid",
@@ -48,8 +71,11 @@ const templates = [
     itemStyle: "aspect-[3/4] rotate-3 shadow-xl",
     maxPhotos: 4,
   },
+];
+
+const frameTemplates: FrameTemplate[] = [
   {
-    id: "frame-vertical-3cut",
+    id: "frame-vertical-3cut-1",
     name: "프레임 3컷 세로",
     frameUrl: frameBG,
     width: 200,
@@ -62,7 +88,7 @@ const templates = [
     ],
   },
   {
-    id: "frame-vertical-3cut",
+    id: "frame-vertical-3cut-2",
     name: "프레임 3컷 세로2",
     frameUrl: frameBG2,
     width: 200,
@@ -85,7 +111,14 @@ interface UploadedFile {
 function App() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [selectedBackground, setSelectedBackground] = useState(backgrounds[0]);
-  const [selectedTemplate, setSelectedTemplate] = useState(templates[0]);
+  const [selectedTemplate, setSelectedTemplate] = useState<Template>(
+    templates[0]
+  );
+  const [selectedFrameTemplate, setSelectedFrameTemplate] =
+    useState<FrameTemplate | null>(null);
+  const [showFramePreview, setShowFramePreview] = useState(false);
+  const [previewFrameTemplate, setPreviewFrameTemplate] =
+    useState<FrameTemplate | null>(null);
   const [timer, setTimer] = useState<number | null>(null);
   const [continuousMode, setContinuousMode] = useState(false);
   const [continuousInterval, setContinuousInterval] = useState(3);
@@ -107,12 +140,13 @@ function App() {
 
   const getPhotoAspectRatio = useCallback(() => {
     if (
-      selectedTemplate.photoPositions &&
-      selectedTemplate.photoPositions.length > 0
+      selectedFrameTemplate &&
+      selectedFrameTemplate.photoPositions &&
+      selectedFrameTemplate.photoPositions.length > 0
     ) {
-      const pos = selectedTemplate.photoPositions[0];
-      const photoWidth = pos.width * (selectedTemplate.width || 200);
-      const photoHeight = pos.height * (selectedTemplate.height || 600);
+      const pos = selectedFrameTemplate.photoPositions[0];
+      const photoWidth = pos.width * (selectedFrameTemplate.width || 200);
+      const photoHeight = pos.height * (selectedFrameTemplate.height || 600);
       return photoWidth / photoHeight;
     } else if (selectedTemplate.itemStyle) {
       const match = selectedTemplate.itemStyle.match(/aspect-\[(\d+)\/(\d+)\]/);
@@ -121,12 +155,7 @@ function App() {
       }
     }
     return 1 / 3;
-  }, [
-    selectedTemplate.photoPositions,
-    selectedTemplate.itemStyle,
-    selectedTemplate.width,
-    selectedTemplate.height,
-  ]);
+  }, [selectedFrameTemplate, selectedTemplate.itemStyle]);
 
   const getResolutionMultiplier = useCallback(() => {
     return {
@@ -138,6 +167,12 @@ function App() {
 
   const getPhotoSize = useCallback(() => {
     const multiplier = getResolutionMultiplier();
+    if (selectedFrameTemplate) {
+      return {
+        width: (selectedFrameTemplate.width || 200) * multiplier,
+        height: (selectedFrameTemplate.height || 600) * multiplier,
+      };
+    }
     if (selectedTemplate.id === "vertical-strip") {
       return {
         width: 200 * multiplier,
@@ -148,10 +183,13 @@ function App() {
       width: 300 * multiplier,
       height: 400 * multiplier,
     };
-  }, [selectedTemplate.id, getResolutionMultiplier]);
+  }, [selectedFrameTemplate, selectedTemplate.id, getResolutionMultiplier]);
 
   const capture = useCallback(async () => {
-    if (webcamRef.current && photos.length < selectedTemplate.maxPhotos) {
+    const maxPhotos = selectedFrameTemplate
+      ? selectedFrameTemplate.maxPhotos
+      : selectedTemplate.maxPhotos;
+    if (webcamRef.current && photos.length < maxPhotos) {
       const imageSrc = webcamRef.current.getScreenshot();
       if (imageSrc) {
         try {
@@ -178,7 +216,7 @@ function App() {
             const base64data = reader.result as string;
             setPhotos((prev) => {
               // 최대 사진 개수를 초과하지 않도록 체크
-              if (prev.length >= selectedTemplate.maxPhotos) {
+              if (prev.length >= maxPhotos) {
                 return prev;
               }
               return [...prev, base64data];
@@ -188,7 +226,7 @@ function App() {
           console.error("Error processing image:", error);
           setPhotos((prev) => {
             // 최대 사진 개수를 초과하지 않도록 체크
-            if (prev.length >= selectedTemplate.maxPhotos) {
+            if (prev.length >= maxPhotos) {
               return prev;
             }
             return [...prev, imageSrc];
@@ -196,10 +234,13 @@ function App() {
         }
       }
     }
-  }, [photos, selectedTemplate.maxPhotos, getPhotoSize]);
+  }, [photos, selectedFrameTemplate, selectedTemplate.maxPhotos, getPhotoSize]);
 
   const startTimer = useCallback(() => {
-    if (photos.length >= selectedTemplate.maxPhotos) return;
+    const maxPhotos = selectedFrameTemplate
+      ? selectedFrameTemplate.maxPhotos
+      : selectedTemplate.maxPhotos;
+    if (photos.length >= maxPhotos) return;
     if (continuousMode) {
       setTimer(continuousInterval);
     } else {
@@ -207,6 +248,7 @@ function App() {
     }
   }, [
     photos.length,
+    selectedFrameTemplate,
     selectedTemplate.maxPhotos,
     continuousMode,
     continuousInterval,
@@ -221,7 +263,10 @@ function App() {
       setTimer(null);
 
       // 연속 촬영 모드일 경우 다음 촬영 준비
-      if (continuousMode && photos.length < selectedTemplate.maxPhotos - 1) {
+      const maxPhotos = selectedFrameTemplate
+        ? selectedFrameTemplate.maxPhotos
+        : selectedTemplate.maxPhotos;
+      if (continuousMode && photos.length < maxPhotos - 1) {
         setTimeout(() => {
           setTimer(continuousInterval);
         }, 1000);
@@ -239,6 +284,7 @@ function App() {
     capture,
     continuousMode,
     photos.length,
+    selectedFrameTemplate,
     selectedTemplate.maxPhotos,
     continuousInterval,
   ]);
@@ -411,13 +457,30 @@ function App() {
   }, [getResolutionMultiplier, isDownloading, isUploading]);
 
   useEffect(() => {
-    if (!selectedTemplate.frameUrl) return;
+    const frameUrl = selectedFrameTemplate
+      ? selectedFrameTemplate.frameUrl
+      : null;
+    if (!frameUrl) return;
     const img = new window.Image();
-    img.src = selectedTemplate.frameUrl;
+    img.src = frameUrl;
     img.onload = () => {
       setFrameSize({ width: img.width, height: img.height });
     };
-  }, [selectedTemplate.frameUrl]);
+  }, [selectedFrameTemplate]);
+
+  const handleFrameTemplateSelect = (template: FrameTemplate) => {
+    setPreviewFrameTemplate(template);
+    setShowFramePreview(true);
+  };
+
+  const confirmFrameTemplate = () => {
+    if (previewFrameTemplate) {
+      setSelectedFrameTemplate(previewFrameTemplate);
+      setPhotos([]);
+      setShowFramePreview(false);
+      setPreviewFrameTemplate(null);
+    }
+  };
 
   return (
     <Router>
@@ -572,11 +635,17 @@ function App() {
                           <button
                             onClick={startTimer}
                             disabled={
-                              photos.length >= selectedTemplate.maxPhotos ||
+                              photos.length >=
+                                (selectedFrameTemplate
+                                  ? selectedFrameTemplate.maxPhotos
+                                  : selectedTemplate.maxPhotos) ||
                               timer !== null
                             }
                             className={`px-4 sm:px-6 py-2 rounded-full shadow-lg transition-all duration-300 hover:scale-105 flex items-center gap-2 text-sm sm:text-base ${
-                              photos.length >= selectedTemplate.maxPhotos
+                              photos.length >=
+                              (selectedFrameTemplate
+                                ? selectedFrameTemplate.maxPhotos
+                                : selectedTemplate.maxPhotos)
                                 ? isDarkMode
                                   ? "bg-gray-700 text-gray-500 cursor-not-allowed"
                                   : "bg-gray-300 text-gray-500 cursor-not-allowed"
@@ -590,7 +659,11 @@ function App() {
                             <Camera size={20} className="sm:w-6 sm:h-6" />
                             {timer !== null
                               ? "촬영 준비중..."
-                              : `촬영 (${photos.length}/${selectedTemplate.maxPhotos})`}
+                              : `촬영 (${photos.length}/${
+                                  selectedFrameTemplate
+                                    ? selectedFrameTemplate.maxPhotos
+                                    : selectedTemplate.maxPhotos
+                                })`}
                           </button>
                         </div>
                       </div>
@@ -604,17 +677,17 @@ function App() {
                           : "bg-white/80 backdrop-blur-sm border-pink-200"
                       }`}
                     >
-                      {selectedTemplate.id === "frame-vertical-3cut" ? (
+                      {selectedFrameTemplate ? (
                         <div className="overflow-auto max-h-[800px]">
                           <div
                             ref={resultRef}
                             style={{
                               width:
-                                selectedTemplate.width ||
+                                selectedFrameTemplate.width ||
                                 frameSize.width ||
                                 320,
                               height:
-                                selectedTemplate.height ||
+                                selectedFrameTemplate.height ||
                                 frameSize.height ||
                                 800,
                               position: "relative",
@@ -640,7 +713,7 @@ function App() {
                               }}
                             />
                             {/* 사진들 (중간) */}
-                            {selectedTemplate.photoPositions?.map(
+                            {selectedFrameTemplate.photoPositions?.map(
                               (pos, idx) => (
                                 <div
                                   key={idx}
@@ -681,7 +754,7 @@ function App() {
                             )}
                             {/* 프레임 오버레이 (맨 위) */}
                             <img
-                              src={selectedTemplate.frameUrl}
+                              src={selectedFrameTemplate.frameUrl}
                               alt="frame"
                               style={{
                                 position: "absolute",
@@ -779,12 +852,16 @@ function App() {
                           <button
                             onClick={downloadResult}
                             disabled={
-                              photos.length !== selectedTemplate.maxPhotos ||
-                              isDownloading
+                              photos.length !==
+                                (selectedFrameTemplate
+                                  ? selectedFrameTemplate.maxPhotos
+                                  : selectedTemplate.maxPhotos) || isDownloading
                             }
                             className={`flex-1 px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 flex items-center gap-2 ${
-                              photos.length !== selectedTemplate.maxPhotos ||
-                              isDownloading
+                              photos.length !==
+                                (selectedFrameTemplate
+                                  ? selectedFrameTemplate.maxPhotos
+                                  : selectedTemplate.maxPhotos) || isDownloading
                                 ? isDarkMode
                                   ? "bg-gray-700 text-gray-500 cursor-not-allowed"
                                   : "bg-gray-300 text-gray-500 cursor-not-allowed"
@@ -803,12 +880,16 @@ function App() {
                           <button
                             onClick={generateQRCode}
                             disabled={
-                              photos.length !== selectedTemplate.maxPhotos ||
-                              isUploading
+                              photos.length !==
+                                (selectedFrameTemplate
+                                  ? selectedFrameTemplate.maxPhotos
+                                  : selectedTemplate.maxPhotos) || isUploading
                             }
                             className={`flex-1 px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 flex items-center gap-2 ${
-                              photos.length !== selectedTemplate.maxPhotos ||
-                              isUploading
+                              photos.length !==
+                                (selectedFrameTemplate
+                                  ? selectedFrameTemplate.maxPhotos
+                                  : selectedTemplate.maxPhotos) || isUploading
                                 ? isDarkMode
                                   ? "bg-gray-700 text-gray-500 cursor-not-allowed"
                                   : "bg-gray-300 text-gray-500 cursor-not-allowed"
@@ -850,10 +931,12 @@ function App() {
                           key={template.id}
                           onClick={() => {
                             setSelectedTemplate(template);
+                            setSelectedFrameTemplate(null);
                             setPhotos([]);
                           }}
                           className={`p-2 rounded-xl border text-xs transition-all duration-300 hover:scale-105 ${
-                            selectedTemplate.id === template.id
+                            selectedTemplate.id === template.id &&
+                            !selectedFrameTemplate
                               ? isDarkMode
                                 ? "border-purple-400 bg-purple-400/20 text-white shadow-lg shadow-purple-400/20"
                                 : "border-pink-500 bg-pink-500/10 text-pink-500 shadow-lg shadow-pink-500/20"
@@ -867,8 +950,52 @@ function App() {
                       ))}
                     </div>
                   </div>
+
+                  {/* Frame Template Selection */}
+                  <div
+                    className={`p-4 rounded-2xl shadow-xl border transition-all duration-500 hover:shadow-2xl ${
+                      isDarkMode
+                        ? "bg-purple-900/30 backdrop-blur-sm border-purple-500/30"
+                        : "bg-white/80 backdrop-blur-sm border-pink-200"
+                    }`}
+                  >
+                    <h2
+                      className={`text-lg font-semibold mb-2 flex items-center gap-2 ${
+                        isDarkMode ? "text-white" : "text-gray-900"
+                      }`}
+                    >
+                      <Layout size={20} /> 프레임 템플릿
+                    </h2>
+                    <div className="grid grid-cols-1 gap-2">
+                      {frameTemplates.map((template) => (
+                        <button
+                          key={template.id}
+                          onClick={() => handleFrameTemplateSelect(template)}
+                          className={`p-3 rounded-xl border transition-all duration-300 hover:scale-105 ${
+                            selectedFrameTemplate?.id === template.id
+                              ? isDarkMode
+                                ? "border-purple-400 bg-purple-400/20 text-white shadow-lg shadow-purple-400/20"
+                                : "border-pink-500 bg-pink-500/10 text-pink-500 shadow-lg shadow-pink-500/20"
+                              : isDarkMode
+                              ? "border-purple-500/30 text-purple-200 hover:border-purple-400 hover:bg-purple-400/10"
+                              : "border-pink-200 text-pink-600 hover:border-pink-500 hover:bg-pink-50"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <img
+                              src={template.frameUrl}
+                              alt={template.name}
+                              className="w-8 h-8 object-cover rounded"
+                            />
+                            <span className="text-sm">{template.name}</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Background Selection */}
-                  {!selectedTemplate.frameUrl && (
+                  {!selectedFrameTemplate && (
                     <div
                       className={`p-4 rounded-2xl shadow-xl border transition-all duration-500 hover:shadow-2xl ${
                         isDarkMode
@@ -1027,6 +1154,72 @@ function App() {
               {uploadError && (
                 <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-full shadow-lg">
                   {uploadError}
+                </div>
+              )}
+
+              {/* 프레임 미리보기 모달 */}
+              {showFramePreview && previewFrameTemplate && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+                  <div
+                    className={`p-6 rounded-2xl shadow-xl border max-w-md w-full mx-4 ${
+                      isDarkMode
+                        ? "bg-purple-900/90 backdrop-blur-sm border-purple-500/30"
+                        : "bg-white/90 backdrop-blur-sm border-pink-200"
+                    }`}
+                  >
+                    <div className="flex flex-col items-center gap-4">
+                      <h3
+                        className={`text-xl font-semibold ${
+                          isDarkMode ? "text-white" : "text-gray-900"
+                        }`}
+                      >
+                        프레임 미리보기
+                      </h3>
+                      <div className="relative bg-white rounded-xl overflow-hidden shadow-lg">
+                        <img
+                          src={previewFrameTemplate.frameUrl}
+                          alt={previewFrameTemplate.name}
+                          className="w-full h-auto"
+                          style={{
+                            width: previewFrameTemplate.width || 200,
+                            height: previewFrameTemplate.height || 600,
+                          }}
+                        />
+                      </div>
+                      <p
+                        className={`text-sm text-center ${
+                          isDarkMode ? "text-gray-300" : "text-gray-600"
+                        }`}
+                      >
+                        {previewFrameTemplate.name}
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setShowFramePreview(false);
+                            setPreviewFrameTemplate(null);
+                          }}
+                          className={`px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 ${
+                            isDarkMode
+                              ? "bg-gray-600 text-white hover:bg-gray-700"
+                              : "bg-gray-300 text-gray-700 hover:bg-gray-400"
+                          }`}
+                        >
+                          취소
+                        </button>
+                        <button
+                          onClick={confirmFrameTemplate}
+                          className={`px-4 py-2 rounded-full transition-all duration-300 hover:scale-105 ${
+                            isDarkMode
+                              ? "bg-purple-500 text-white hover:bg-purple-600"
+                              : "bg-pink-500 text-white hover:bg-pink-600"
+                          }`}
+                        >
+                          선택
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
