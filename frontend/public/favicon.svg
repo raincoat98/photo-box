@@ -1,0 +1,25 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- 배경 원 -->
+  <circle cx="100" cy="100" r="90" fill="#fdf2f8"/>
+
+  <!-- 카메라 본체 -->
+  <rect x="60" y="70" width="80" height="60" rx="12" fill="#4a5568"/>
+
+  <!-- 렌즈 -->
+  <circle cx="100" cy="100" r="18" fill="#2d3748"/>
+  <circle cx="100" cy="100" r="8" fill="#e2e8f0"/>
+
+  <!-- 셔터 버튼 (위) -->
+  <rect x="65" y="60" width="20" height="10" rx="4" fill="#718096"/>
+
+  <!-- 뷰파인더 -->
+  <circle cx="135" cy="85" r="4" fill="#a0aec0"/>
+
+  <!-- 반짝이 효과 -->
+  <polygon points="30,30 33,40 43,40 35,47 38,57 30,51 22,57 25,47 17,40 27,40"
+           fill="#fbb6ce" opacity="0.8"/>
+
+  <!-- 하트 포인트 -->
+  <path d="M170 60 Q165 50 160 55 Q155 60 170 75 Q185 60 180 55 Q175 50 170 60"
+        fill="#f687b3" opacity="0.9"/>
+</svg>
