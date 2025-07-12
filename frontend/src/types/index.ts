@@ -4,6 +4,9 @@ export interface Template {
   layout: string;
   itemStyle: string;
   maxPhotos: number;
+  width: number;
+  height: number;
+  aspectRatio?: number;
 }
 
 export interface FrameTemplate {

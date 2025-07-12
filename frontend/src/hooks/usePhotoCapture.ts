@@ -40,17 +40,24 @@ export const usePhotoCapture = ({
         height: (selectedFrameTemplate.height || 600) * multiplier,
       };
     }
-    if (selectedTemplate.id === "vertical-strip") {
+    // 템플릿의 동적 크기 속성 사용
+    if (selectedTemplate.width && selectedTemplate.height) {
       return {
-        width: 200 * multiplier,
-        height: 600 * multiplier,
+        width: selectedTemplate.width * multiplier,
+        height: selectedTemplate.height * multiplier,
       };
     }
+    // 기본값 (fallback)
     return {
       width: 300 * multiplier,
       height: 400 * multiplier,
     };
-  }, [selectedFrameTemplate, selectedTemplate.id, getResolutionMultiplier]);
+  }, [
+    selectedFrameTemplate,
+    selectedTemplate.width,
+    selectedTemplate.height,
+    getResolutionMultiplier,
+  ]);
 
   const getCameraAspectRatio = useCallback(() => {
     if (
@@ -62,6 +69,8 @@ export const usePhotoCapture = ({
       const photoWidth = pos.width * (selectedFrameTemplate.width || 200);
       const photoHeight = pos.height * (selectedFrameTemplate.height || 600);
       return photoWidth / photoHeight;
+    } else if (selectedTemplate.aspectRatio) {
+      return selectedTemplate.aspectRatio;
     } else if (selectedTemplate.itemStyle) {
       const match = selectedTemplate.itemStyle.match(/aspect-\[(\d+)\/(\d+)\]/);
       if (match) {
@@ -69,14 +78,14 @@ export const usePhotoCapture = ({
       }
     }
     return 3 / 4;
-  }, [selectedFrameTemplate, selectedTemplate.itemStyle]);
+  }, [
+    selectedFrameTemplate,
+    selectedTemplate.aspectRatio,
+    selectedTemplate.itemStyle,
+  ]);
 
   const getCameraSize = useCallback(() => {
-    const multiplier = {
-      low: 1,
-      medium: 2,
-      high: 3,
-    }[resolution];
+    // 웹캠 표시 크기는 해상도와 무관하게 고정
     if (
       selectedFrameTemplate &&
       selectedFrameTemplate.photoPositions &&
@@ -86,21 +95,23 @@ export const usePhotoCapture = ({
       const photoWidth = pos.width * (selectedFrameTemplate.width || 200);
       const photoHeight = pos.height * (selectedFrameTemplate.height || 600);
       return {
-        width: photoWidth * multiplier,
-        height: photoHeight * multiplier,
+        width: photoWidth,
+        height: photoHeight,
       };
     }
-    if (selectedTemplate.id === "vertical-strip") {
+    // 템플릿의 동적 크기 속성 사용
+    if (selectedTemplate.width && selectedTemplate.height) {
       return {
-        width: 200 * multiplier,
-        height: 600 * multiplier,
+        width: selectedTemplate.width,
+        height: selectedTemplate.height,
       };
     }
+    // 기본값 (fallback)
     return {
-      width: 300 * multiplier,
-      height: 400 * multiplier,
+      width: 300,
+      height: 400,
     };
-  }, [selectedFrameTemplate, selectedTemplate.id, resolution]);
+  }, [selectedFrameTemplate, selectedTemplate.width, selectedTemplate.height]);
 
   const capture = useCallback(async () => {
     const maxPhotos = selectedFrameTemplate

@@ -126,9 +126,6 @@ const CameraSection: React.FC<CameraSectionProps> = ({
             objectFit: "cover",
             imageRendering: "crisp-edges",
             aspectRatio: getCameraAspectRatio(),
-            maxWidth: `${getCameraSize().width}px`,
-            maxHeight: `${getCameraSize().height}px`,
-            margin: "0 auto",
           }}
         />
 

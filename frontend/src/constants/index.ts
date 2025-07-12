@@ -16,6 +16,9 @@ export const templates: Template[] = [
     layout: "grid grid-cols-2 gap-4 p-3",
     itemStyle: "aspect-[3/4]",
     maxPhotos: 4,
+    width: 360,
+    height: 480,
+    aspectRatio: 3 / 4,
   },
   {
     id: "vertical",
@@ -23,6 +26,9 @@ export const templates: Template[] = [
     layout: "grid grid-cols-1 gap-4 p-3",
     itemStyle: "aspect-[3/2]",
     maxPhotos: 3,
+    width: 480,
+    height: 360,
+    aspectRatio: 4 / 3,
   },
   {
     id: "polaroid",
@@ -30,6 +36,9 @@ export const templates: Template[] = [
     layout: "grid grid-cols-2 gap-6 p-6",
     itemStyle: "aspect-[3/4] rotate-3 shadow-xl",
     maxPhotos: 4,
+    width: 360,
+    height: 480,
+    aspectRatio: 3 / 4,
   },
 ];
 
