@@ -122,6 +122,7 @@ function App() {
   const [timer, setTimer] = useState<number | null>(null);
   const [continuousMode, setContinuousMode] = useState(false);
   const [continuousInterval, setContinuousInterval] = useState(3);
+  const [isCapturing, setIsCapturing] = useState(false);
   const [resolution, setResolution] = useState<"low" | "medium" | "high">(
     "medium"
   );
@@ -294,6 +295,7 @@ function App() {
     if (timer === null) return;
 
     if (timer === 0) {
+      setIsCapturing(true);
       capture();
       setTimer(null);
 
@@ -303,7 +305,12 @@ function App() {
         : selectedTemplate.maxPhotos;
       if (continuousMode && photos.length < maxPhotos - 1) {
         setTimeout(() => {
+          setIsCapturing(false);
           setTimer(continuousInterval);
+        }, 1500);
+      } else {
+        setTimeout(() => {
+          setIsCapturing(false);
         }, 1000);
       }
       return;
@@ -646,13 +653,35 @@ function App() {
                             margin: "0 auto",
                           }}
                         />
-                        {timer !== null && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm rounded-xl animate-pulse">
-                            <span className="text-white text-5xl sm:text-7xl font-bold animate-bounce">
-                              {timer}
-                            </span>
+
+                        {/* 타이머 뱃지 */}
+                        {(timer !== null || isCapturing) && (
+                          <div className="absolute top-4 right-4 z-10">
+                            {timer !== null ? (
+                              <div
+                                className={`px-3 py-1 rounded-full text-sm font-bold shadow-lg backdrop-blur-sm ${
+                                  isDarkMode
+                                    ? "bg-purple-500/90 text-white border border-purple-400/50"
+                                    : "bg-pink-500/90 text-white border border-pink-400/50"
+                                }`}
+                              >
+                                {timer}초
+                              </div>
+                            ) : isCapturing ? (
+                              <div
+                                className={`px-3 py-1 rounded-full text-sm font-medium shadow-lg backdrop-blur-sm flex items-center gap-2 ${
+                                  isDarkMode
+                                    ? "bg-purple-500/90 text-white border border-purple-400/50"
+                                    : "bg-pink-500/90 text-white border border-pink-400/50"
+                                }`}
+                              >
+                                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                촬영중
+                              </div>
+                            ) : null}
                           </div>
                         )}
+
                         <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2">
                           {photos.length > 0 && (
                             <button
