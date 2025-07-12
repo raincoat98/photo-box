@@ -1194,9 +1194,9 @@ function App() {
 
               {/* 프레임 미리보기 모달 */}
               {showFramePreview && previewFrameTemplate && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                   <div
-                    className={`p-6 rounded-2xl shadow-xl border max-w-md w-full mx-4 ${
+                    className={`p-6 rounded-2xl shadow-xl border max-w-sm sm:max-w-md lg:max-w-lg w-full max-h-[90vh] overflow-y-auto ${
                       isDarkMode
                         ? "bg-purple-900/90 backdrop-blur-sm border-purple-500/30"
                         : "bg-white/90 backdrop-blur-sm border-pink-200"
@@ -1210,14 +1210,16 @@ function App() {
                       >
                         프레임 미리보기
                       </h3>
-                      <div className="relative bg-white rounded-xl overflow-hidden shadow-lg">
+                      <div className="relative bg-white rounded-xl overflow-hidden shadow-lg max-w-full">
                         <img
                           src={previewFrameTemplate.frameUrl}
                           alt={previewFrameTemplate.name}
-                          className="w-full h-auto"
+                          className="w-full h-auto object-contain"
                           style={{
-                            width: previewFrameTemplate.width || 200,
-                            height: previewFrameTemplate.height || 600,
+                            maxWidth: "100%",
+                            maxHeight: "60vh",
+                            width: "auto",
+                            height: "auto",
                           }}
                         />
                       </div>
@@ -1228,7 +1230,7 @@ function App() {
                       >
                         {previewFrameTemplate.name}
                       </p>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap justify-center">
                         <button
                           onClick={() => {
                             setShowFramePreview(false);
