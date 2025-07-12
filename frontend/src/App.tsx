@@ -138,24 +138,59 @@ function App() {
   const resultRef = useRef<HTMLDivElement>(null);
   const [frameSize, setFrameSize] = useState({ width: 0, height: 0 });
 
-  const getPhotoAspectRatio = useCallback(() => {
+  // 카메라 전용 aspect ratio 함수 (frameTemplate 사용시 각 사진 슬롯 비율과 동일하게)
+  const getCameraAspectRatio = useCallback(() => {
+    // frameTemplate 사용시에는 각 사진 슬롯의 비율 사용
     if (
       selectedFrameTemplate &&
       selectedFrameTemplate.photoPositions &&
       selectedFrameTemplate.photoPositions.length > 0
     ) {
-      const pos = selectedFrameTemplate.photoPositions[0];
+      const pos = selectedFrameTemplate.photoPositions[0]; // 첫 번째 사진 슬롯의 비율 사용
       const photoWidth = pos.width * (selectedFrameTemplate.width || 200);
       const photoHeight = pos.height * (selectedFrameTemplate.height || 600);
-      return photoWidth / photoHeight;
+      return photoWidth / photoHeight; // 각 사진 슬롯의 비율
     } else if (selectedTemplate.itemStyle) {
       const match = selectedTemplate.itemStyle.match(/aspect-\[(\d+)\/(\d+)\]/);
       if (match) {
         return Number(match[1]) / Number(match[2]);
       }
     }
-    return 1 / 3;
+    return 3 / 4; // 기본 세로 비율
   }, [selectedFrameTemplate, selectedTemplate.itemStyle]);
+
+  // 카메라 크기 계산 함수 (frameTemplate 사용시 각 사진 슬롯 크기와 동일하게)
+  const getCameraSize = useCallback(() => {
+    const multiplier = {
+      low: 1,
+      medium: 2,
+      high: 3,
+    }[resolution];
+    // frameTemplate 사용시에는 각 사진 슬롯의 크기를 사용
+    if (
+      selectedFrameTemplate &&
+      selectedFrameTemplate.photoPositions &&
+      selectedFrameTemplate.photoPositions.length > 0
+    ) {
+      const pos = selectedFrameTemplate.photoPositions[0]; // 첫 번째 사진 슬롯의 크기 사용
+      const photoWidth = pos.width * (selectedFrameTemplate.width || 200);
+      const photoHeight = pos.height * (selectedFrameTemplate.height || 600);
+      return {
+        width: photoWidth * multiplier,
+        height: photoHeight * multiplier,
+      };
+    }
+    if (selectedTemplate.id === "vertical-strip") {
+      return {
+        width: 200 * multiplier,
+        height: 600 * multiplier,
+      };
+    }
+    return {
+      width: 300 * multiplier,
+      height: 400 * multiplier,
+    };
+  }, [selectedFrameTemplate, selectedTemplate.id, resolution]);
 
   const getResolutionMultiplier = useCallback(() => {
     return {
@@ -594,20 +629,20 @@ function App() {
                           className="w-full rounded-xl shadow-lg transition-all duration-500 hover:shadow-2xl"
                           videoConstraints={{
                             width: {
-                              ideal: getPhotoSize().width,
+                              ideal: getCameraSize().width,
                             },
                             height: {
-                              ideal: getPhotoSize().height,
+                              ideal: getCameraSize().height,
                             },
                             facingMode: "user",
-                            aspectRatio: getPhotoAspectRatio(),
+                            aspectRatio: getCameraAspectRatio(),
                           }}
                           style={{
                             objectFit: "cover",
                             imageRendering: "crisp-edges",
-                            aspectRatio: getPhotoAspectRatio(),
-                            maxWidth: `${getPhotoSize().width}px`,
-                            maxHeight: `${getPhotoSize().height}px`,
+                            aspectRatio: getCameraAspectRatio(),
+                            maxWidth: `${getCameraSize().width}px`,
+                            maxHeight: `${getCameraSize().height}px`,
                             margin: "0 auto",
                           }}
                         />
