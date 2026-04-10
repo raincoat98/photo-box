@@ -72,7 +72,12 @@ function PhotoBooth() {
         <div className="flex-1 flex flex-col gap-6 min-w-0">
           <header className="flex justify-between items-start">
             <div>
-              <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">포토 부스</h1>
+              <div className="relative inline-block">
+                <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 relative z-10">
+                  포토 부스
+                </h1>
+                <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-lg blur opacity-25"></div>
+              </div>
               <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
                 당신의 소중한 순간을 담아보세요
               </p>
