@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  background-color: theme('colors.zinc.50');
+}
+html.dark {
+  background-color: theme('colors.zinc.950');
+}
+
 @layer components {
   .card {
     @apply p-5 rounded-2xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm;
