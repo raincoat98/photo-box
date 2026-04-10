@@ -23,12 +23,15 @@ export const templates: Template[] = [
   {
     id: "vertical",
     name: "Vertical Strip",
-    layout: "grid grid-cols-1 gap-4 p-3",
-    itemStyle: "aspect-[3/2]",
+    layout: "flex flex-col gap-2 p-3",
+    itemStyle: "flex-1 rounded-lg",
     maxPhotos: 3,
     width: 480,
     height: 360,
     aspectRatio: 4 / 3,
+    compact: true,
+    displayWidth: 200,
+    displayHeight: 600,
   },
   {
     id: "polaroid",

@@ -6,7 +6,10 @@ export interface Template {
   maxPhotos: number;
   width: number;
   height: number;
-  aspectRatio?: number;
+  aspectRatio: number;
+  compact?: boolean;
+  displayWidth?: number;
+  displayHeight?: number;
 }
 
 export interface FrameTemplate {

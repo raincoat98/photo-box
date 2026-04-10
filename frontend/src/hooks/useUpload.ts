@@ -1,192 +1,93 @@
-import { useState, useCallback } from "react";
-import * as htmlToImage from "html-to-image";
-import imageCompression from "browser-image-compression";
-import { UploadedFile } from "../types";
-import { API_ENDPOINTS } from "../config";
+import { useState, useCallback, RefObject } from 'react';
+import * as htmlToImage from 'html-to-image';
+import imageCompression from 'browser-image-compression';
+import { UploadedFile } from '../types';
+import { API_ENDPOINTS } from '../config';
 
-interface UseUploadProps {
-  getResolutionMultiplier: () => number;
+const COMPRESS_OPTIONS = {
+  maxSizeMB: 2,
+  maxWidthOrHeight: 3840,
+  useWebWorker: true,
+  fileType: 'image/png' as const,
+};
+
+async function renderNode(node: HTMLDivElement, scale: number): Promise<string> {
+  return htmlToImage.toPng(node, {
+    quality: 1,
+    pixelRatio: scale,
+    width: node.offsetWidth * scale,
+    height: node.offsetHeight * scale,
+    style: { transform: `scale(${scale})`, transformOrigin: 'top left' },
+  });
 }
 
-export const useUpload = ({ getResolutionMultiplier }: UseUploadProps) => {
+async function compressDataUrl(dataUrl: string, filename: string) {
+  const blob = await (await fetch(dataUrl)).blob();
+  const file = new File([blob], filename, { type: 'image/png' });
+  return imageCompression(file, COMPRESS_OPTIONS);
+}
+
+export function useUpload(multiplier: number) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
 
-  const handleUpload = async (file: File) => {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    try {
-      const response = await fetch(API_ENDPOINTS.UPLOAD, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.details || "업로드 실패");
-      }
-
-      const data = await response.json();
-      setUploadedFile(data);
-      return data;
-    } catch (error) {
-      console.error("Upload error:", error);
-      setUploadError(
-        error instanceof Error ? error.message : "파일 업로드에 실패했습니다."
-      );
-      throw error;
-    }
-  };
-
-  const downloadResult = useCallback(
-    (resultRef: React.RefObject<HTMLDivElement>) => {
-      if (resultRef.current === null || isDownloading) return;
-
+  const download = useCallback(
+    async (ref: RefObject<HTMLDivElement>) => {
+      const node = ref.current;
+      if (!node || isDownloading) return;
       setIsDownloading(true);
-
-      const resolutionMultiplier = getResolutionMultiplier();
-      const node = resultRef.current;
-      const width = node.offsetWidth * resolutionMultiplier;
-      const height = node.offsetHeight * resolutionMultiplier;
-
-      htmlToImage
-        .toPng(node, {
-          quality: 1.0,
-          pixelRatio: resolutionMultiplier,
-          width,
-          height,
-          style: {
-            transform: `scale(${resolutionMultiplier})`,
-            transformOrigin: "top left",
-          },
-        })
-        .then(async (dataUrl) => {
-          try {
-            const response = await fetch(dataUrl);
-            const blob = await response.blob();
-            const file = new File([blob], "life4cut.png", {
-              type: "image/png",
-            });
-
-            const options = {
-              maxSizeMB: 2,
-              maxWidthOrHeight: 3840,
-              useWebWorker: true,
-              fileType: "image/png",
-            };
-
-            const compressedFile = await imageCompression(file, options);
-
-            const url = URL.createObjectURL(compressedFile);
-            const link = document.createElement("a");
-            link.download = "life4cut.png";
-            link.href = url;
-            link.click();
-          } catch (error) {
-            console.error("Error processing final image:", error);
-            const link = document.createElement("a");
-            link.download = "life4cut.png";
-            link.href = dataUrl;
-            link.click();
-          }
-        })
-        .catch((err) => {
-          console.error("Error downloading image:", err);
-        })
-        .finally(() => {
-          setTimeout(() => {
-            setIsDownloading(false);
-          }, 1000);
-        });
-    },
-    [getResolutionMultiplier, isDownloading]
-  );
-
-  const generateQRCode = useCallback(
-    (resultRef: React.RefObject<HTMLDivElement>) => {
-      if (resultRef.current === null || isDownloading || isUploading) {
-        return;
+      try {
+        const dataUrl = await renderNode(node, multiplier);
+        const file = await compressDataUrl(dataUrl, 'life4cut.png');
+        const url = URL.createObjectURL(file);
+        Object.assign(document.createElement('a'), {
+          download: 'life4cut.png',
+          href: url,
+        }).click();
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setTimeout(() => setIsDownloading(false), 1000);
       }
-
-      setIsUploading(true);
-      setUploadError(null);
-
-      const resolutionMultiplier = getResolutionMultiplier();
-      const node = resultRef.current;
-      const width = node.offsetWidth * resolutionMultiplier;
-      const height = node.offsetHeight * resolutionMultiplier;
-
-      htmlToImage
-        .toPng(node, {
-          quality: 1.0,
-          pixelRatio: resolutionMultiplier,
-          width,
-          height,
-          style: {
-            transform: `scale(${resolutionMultiplier})`,
-            transformOrigin: "top left",
-          },
-        })
-        .then(async (dataUrl) => {
-          try {
-            const response = await fetch(dataUrl);
-            const blob = await response.blob();
-            const file = new File([blob], "life4cut.png", {
-              type: "image/png",
-            });
-
-            const options = {
-              maxSizeMB: 2,
-              maxWidthOrHeight: 3840,
-              useWebWorker: true,
-              fileType: "image/png",
-            };
-
-            const compressedFile = await imageCompression(file, options);
-
-            await handleUpload(compressedFile);
-          } catch (error) {
-            console.error("Error processing image:", error);
-            setUploadError(
-              error instanceof Error
-                ? error.message
-                : "이미지 업로드 중 오류가 발생했습니다."
-            );
-          }
-        })
-        .catch((err) => {
-          console.error("Error generating QR code:", err);
-          setUploadError("QR 코드 생성 중 오류가 발생했습니다.");
-        })
-        .finally(() => {
-          setTimeout(() => {
-            setIsUploading(false);
-          }, 1000);
-        });
     },
-    [getResolutionMultiplier, isDownloading, isUploading]
+    [isDownloading, multiplier]
   );
 
-  const clearUploadError = useCallback(() => {
-    setUploadError(null);
-  }, []);
+  const uploadForQR = useCallback(
+    async (ref: RefObject<HTMLDivElement>) => {
+      const node = ref.current;
+      if (!node || isUploading || isDownloading) return;
+      setIsUploading(true);
+      setError(null);
+      try {
+        const dataUrl = await renderNode(node, multiplier);
+        const file = await compressDataUrl(dataUrl, 'life4cut.png');
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch(API_ENDPOINTS.UPLOAD, {
+          method: 'POST',
+          body: formData,
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.details || '업로드 실패');
+        }
+        setUploadedFile(await res.json());
+      } catch (e) {
+        setError(e instanceof Error ? e.message : '업로드 중 오류가 발생했습니다.');
+      } finally {
+        setTimeout(() => setIsUploading(false), 1000);
+      }
+    },
+    [isUploading, isDownloading, multiplier]
+  );
 
-  const resetUpload = useCallback(() => {
+  const reset = useCallback(() => {
     setUploadedFile(null);
-    setUploadError(null);
+    setError(null);
   }, []);
 
-  return {
-    isDownloading,
-    isUploading,
-    uploadError,
-    uploadedFile,
-    downloadResult,
-    generateQRCode,
-    clearUploadError,
-    resetUpload,
-  };
-};
+  return { isDownloading, isUploading, error, uploadedFile, download, uploadForQR, reset };
+}
