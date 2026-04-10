@@ -30,7 +30,7 @@ export const templates: Template[] = [
     height: 360,
     aspectRatio: 4 / 3,
     compact: true,
-    displayWidth: 200,
+    displayWidth: 273,
     displayHeight: 600,
   },
   {
