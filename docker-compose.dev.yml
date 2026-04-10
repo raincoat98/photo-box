@@ -1,0 +1,79 @@
+services:
+  frontend:
+    image: node:18-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:4600
+    networks:
+      - photo-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "4600:4600"
+    depends_on:
+      - minio
+    restart: on-failure
+    volumes:
+      - backend-uploads:/app/uploads
+      - backend-temp:/app/temp
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+      - PORT=4600
+      - SERVER_URL=http://backend:4600
+      - MINIO_ENDPOINT=http://minio:${MINIO_PORT}
+    networks:
+      - photo-network
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "${MINIO_PORT}:${MINIO_PORT}"
+      - "4620:4620"
+    env_file:
+      - .env
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - MINIO_BROWSER_REDIRECT=false
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":4620" --address ":${MINIO_PORT}"
+    networks:
+      - photo-network
+
+  minio-mc:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set myminio http://minio:${MINIO_PORT} $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
+        mc mb myminio/${MINIO_BUCKET_NAME} --ignore-existing &&
+        echo '✅ MinIO bucket created successfully';
+      "
+    env_file:
+      - .env
+    networks:
+      - photo-network
+    restart: "no"
+
+networks:
+  photo-network:
+    driver: bridge
+
+volumes:
+  backend-uploads:
+  backend-temp:
+  minio-data:
