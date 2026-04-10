@@ -152,7 +152,7 @@ function PhotoBooth() {
 
       <button
         onClick={() => setShowUrlQR(true)}
-        className="fixed bottom-6 right-6 p-3.5 rounded-2xl bg-pink-500 hover:bg-pink-600 text-white shadow-lg transition-colors"
+        className="fixed bottom-6 right-6 p-3.5 rounded-2xl bg-pink-500 hover:bg-pink-600 text-white shadow-lg transition-colors z-40"
       >
         <QrCode size={22} />
       </button>
