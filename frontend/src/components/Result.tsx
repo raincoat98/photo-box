@@ -71,7 +71,7 @@ export default function Result({
               className="relative bg-white"
               style={{ width: frameTemplate.width, height: frameTemplate.height }}
             >
-              <img src={background} alt="" className="absolute inset-0 w-full h-full object-cover opacity-40" />
+              <div className="absolute inset-0 w-full h-full opacity-40" style={{ background, backgroundSize: 'cover', backgroundPosition: 'center' }} />
               {frameTemplate.photoPositions.map((pos, i) => (
                 <div
                   key={i}
@@ -104,7 +104,7 @@ export default function Result({
               className="relative bg-white"
               style={{ width: template.displayWidth ?? template.width, height: template.displayHeight ?? template.height }}
             >
-              <img src={background} alt="" className="absolute inset-0 w-full h-full object-cover opacity-40" />
+              <div className="absolute inset-0 w-full h-full opacity-40" style={{ background, backgroundSize: 'cover', backgroundPosition: 'center' }} />
               <div className={`absolute inset-0 z-10 ${template.layout}`}>
                 {Array.from({ length: template.maxPhotos }, (_, i) => (
                   <div key={i} className={`${template.itemStyle} overflow-hidden bg-zinc-200 flex items-center justify-center`}>
@@ -123,7 +123,7 @@ export default function Result({
               className="relative rounded-xl overflow-hidden bg-zinc-200"
               style={{ width: template.displayWidth ?? template.width, height: template.displayHeight ?? template.height }}
             >
-              <img src={background} alt="" className="absolute inset-0 w-full h-full object-cover opacity-50" />
+              <div className="absolute inset-0 w-full h-full opacity-50" style={{ background, backgroundSize: 'cover', backgroundPosition: 'center' }} />
               <div className={`relative z-10 ${template.layout}`}>
                 {Array.from({ length: template.maxPhotos }, (_, i) => (
                   <div key={i} className={`${template.itemStyle} bg-zinc-200 rounded-xl overflow-hidden flex items-center justify-center`}>

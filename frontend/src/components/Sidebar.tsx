@@ -73,21 +73,20 @@ export default function Sidebar({
 
       {/* Backgrounds */}
       {!selectedFrameTemplate && (
-        <div className="card">
+        <div className="card !p-3">
           <p className="section-title">배경</p>
           <div className="grid grid-cols-2 gap-2">
             {backgrounds.map((bg, i) => (
               <button
                 key={i}
                 onClick={() => onBackgroundChange(bg)}
-                className={`rounded-xl overflow-hidden border-2 aspect-video transition-colors ${
+                style={{ background: bg, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                className={`rounded-xl overflow-hidden border-2 aspect-video transition-all ${
                   selectedBackground === bg
-                    ? 'border-pink-500'
-                    : 'border-transparent hover:border-zinc-300 dark:hover:border-zinc-600'
+                    ? 'border-pink-500 scale-105'
+                    : 'border-zinc-300 dark:border-zinc-600 hover:border-zinc-400 dark:hover:border-zinc-500 hover:scale-105'
                 }`}
-              >
-                <img src={bg} alt={`배경 ${i + 1}`} className="w-full h-full object-cover" />
-              </button>
+              />
             ))}
           </div>
         </div>
