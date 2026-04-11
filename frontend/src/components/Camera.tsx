@@ -37,7 +37,7 @@ export default function Camera({
   onReset,
 }: Props) {
   return (
-    <div className="card flex flex-col gap-4">
+    <div className="card flex flex-col gap-2 lg:self-start">
       {/* Controls */}
       <div className="flex flex-wrap gap-2">
         <button
@@ -73,20 +73,23 @@ export default function Camera({
       </div>
 
       {/* Webcam */}
-      <div className="relative rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800">
+      <div
+        className="relative rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 mx-auto"
+        style={{ aspectRatio: String(aspectRatio), width: `min(calc(45vh * ${aspectRatio}), 100%)` }}
+      >
         <Webcam
           ref={webcamRef}
           audio={false}
           screenshotFormat="image/png"
           mirrored={isMirrored}
-          className="w-full block"
+          className="w-full h-full block"
           videoConstraints={{
             width: { ideal: cameraSize.width },
             height: { ideal: cameraSize.height },
             facingMode: 'user',
             aspectRatio,
           }}
-          style={{ aspectRatio: String(aspectRatio), objectFit: 'cover' }}
+          style={{ objectFit: 'cover' }}
         />
 
         {(timer !== null || isCapturing) && (

@@ -1,3 +1,4 @@
+import { Sun, Moon } from 'lucide-react';
 import { Template, FrameTemplate } from '../types';
 
 interface Props {
@@ -7,9 +8,11 @@ interface Props {
   selectedTemplate: Template;
   selectedFrameTemplate: FrameTemplate | null;
   selectedBackground: string;
+  isDark: boolean;
   onTemplateChange: (t: Template) => void;
   onFrameSelect: (f: FrameTemplate) => void;
   onBackgroundChange: (bg: string) => void;
+  onToggleDark: () => void;
 }
 
 export default function Sidebar({
@@ -19,16 +22,18 @@ export default function Sidebar({
   selectedTemplate,
   selectedFrameTemplate,
   selectedBackground,
+  isDark,
   onTemplateChange,
   onFrameSelect,
   onBackgroundChange,
+  onToggleDark,
 }: Props) {
   return (
-    <div className="w-full lg:w-64 flex flex-col gap-4 lg:sticky lg:top-8 self-start">
+    <div className="w-full lg:w-64 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-1 gap-3 lg:overflow-y-auto lg:min-h-0">
       {/* Templates */}
       <div className="card">
         <p className="section-title">템플릿</p>
-        <div className="grid grid-cols-3 lg:grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 md:grid-cols-2 lg:grid-cols-2 gap-2">
           {templates.map((t) => (
             <button
               key={t.id}
@@ -87,6 +92,27 @@ export default function Sidebar({
           </div>
         </div>
       )}
+
+      {/* Title */}
+      <div className="px-1 md:col-span-3 lg:col-span-1">
+        <div className="flex items-center gap-2">
+          <div className="relative inline-block">
+            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 relative z-10">
+              포토 부스
+            </h1>
+            <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-lg blur opacity-25"></div>
+          </div>
+          <button
+            onClick={onToggleDark}
+            className="p-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+          >
+            {isDark ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+        </div>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
+          당신의 소중한 순간을 담아보세요
+        </p>
+      </div>
     </div>
   );
 }

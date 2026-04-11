@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Sun, Moon, QrCode } from 'lucide-react';
+import { QrCode } from 'lucide-react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Webcam from 'react-webcam';
 import { templates, frameTemplates, backgrounds } from './constants';
@@ -66,31 +66,11 @@ function PhotoBooth() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 py-8 flex flex-col lg:flex-row gap-8">
+    <div className="lg:h-screen lg:overflow-hidden bg-zinc-50 dark:bg-zinc-950 transition-colors duration-200">
+      <div className="max-w-7xl mx-auto px-4 py-3 lg:h-full flex flex-col lg:flex-row gap-3 lg:overflow-hidden">
         {/* Left: main content */}
-        <div className="flex-1 flex flex-col gap-6 min-w-0">
-          <header className="flex justify-between items-start">
-            <div>
-              <div className="relative inline-block">
-                <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 relative z-10">
-                  포토 부스
-                </h1>
-                <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-lg blur opacity-25"></div>
-              </div>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-0.5">
-                당신의 소중한 순간을 담아보세요
-              </p>
-            </div>
-            <button
-              onClick={() => setIsDark(!isDark)}
-              className="p-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-            >
-              {isDark ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
-          </header>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="flex-1 flex flex-col gap-3 min-w-0 lg:min-h-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:flex-1 lg:min-h-0 lg:auto-rows-fr">
             <Camera
               webcamRef={webcamRef}
               isMirrored={isMirrored}
@@ -133,9 +113,11 @@ function PhotoBooth() {
           selectedTemplate={template}
           selectedFrameTemplate={frameTemplate}
           selectedBackground={background}
+          isDark={isDark}
           onTemplateChange={handleTemplateChange}
           onFrameSelect={handleFrameSelect}
           onBackgroundChange={setBackground}
+          onToggleDark={() => setIsDark(!isDark)}
         />
       </div>
 
