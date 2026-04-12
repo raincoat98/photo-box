@@ -6,12 +6,12 @@ html {
   background-color: theme('colors.zinc.50');
 }
 html.dark {
-  background-color: theme('colors.zinc.950');
+  background-color: theme('colors.grape.950');
 }
 
 @layer components {
   .card {
-    @apply p-5 rounded-2xl border bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-sm;
+    @apply p-5 rounded-2xl border bg-white dark:bg-grape-900 border-zinc-200 dark:border-grape-800 shadow-sm;
   }
 
   .btn-primary {
@@ -19,15 +19,15 @@ html.dark {
   }
 
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-medium text-sm transition-colors;
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-zinc-100 dark:bg-grape-800 hover:bg-zinc-200 dark:hover:bg-grape-700 text-zinc-700 dark:text-grape-300 font-medium text-sm transition-colors;
   }
 
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 px-2.5 py-2 rounded-xl text-sm font-medium transition-colors text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800;
+    @apply inline-flex items-center justify-center gap-2 px-2.5 py-2 rounded-xl text-sm font-medium transition-colors text-zinc-500 dark:text-grape-400 hover:bg-zinc-100 dark:hover:bg-grape-800;
   }
 
   .btn-toggle {
-    @apply inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700;
+    @apply inline-flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors bg-zinc-100 dark:bg-grape-800 text-zinc-600 dark:text-grape-400 hover:bg-zinc-200 dark:hover:bg-grape-700;
   }
 
   .btn-toggle.active {
