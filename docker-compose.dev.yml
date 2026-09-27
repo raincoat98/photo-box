@@ -21,7 +21,8 @@ services:
     ports:
       - "4600:4600"
     depends_on:
-      - minio
+      minio:
+        condition: service_healthy
     restart: on-failure
     volumes:
       - backend-uploads:/app/uploads
@@ -50,24 +51,15 @@ services:
     volumes:
       - minio-data:/data
     command: server /data --console-address ":4620" --address ":${MINIO_PORT}"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${MINIO_PORT}/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
     networks:
       - photo-network
 
-  minio-mc:
-    image: minio/mc:latest
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-        mc alias set myminio http://minio:${MINIO_PORT} $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} &&
-        mc mb myminio/${MINIO_BUCKET_NAME} --ignore-existing &&
-        echo '✅ MinIO bucket created successfully';
-      "
-    env_file:
-      - .env
-    networks:
-      - photo-network
-    restart: "no"
 
 networks:
   photo-network:

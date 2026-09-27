@@ -27,51 +27,54 @@ nano frontend/.env
 
 필요한 환경변수:
 
-**백엔드 (backend/.env)**:
+**백엔드 (`backend/.env`)**:
 
-- `MINIO_ENDPOINT`: MinIO 서버 엔드포인트
-- `MINIO_ACCESS_KEY`: MinIO 액세스 키
-- `MINIO_SECRET_KEY`: MinIO 시크릿 키
+- `NODE_ENV`: 실행 환경
+- `PORT`: 백엔드 포트
+- `SERVER_URL`: 외부에서 접근할 백엔드 주소
+- `MINIO_ENDPOINT`: 백엔드에서 접근할 MinIO 주소
+- `MINIO_PORT`: MinIO API 포트
+- `MINIO_ROOT_USER`: MinIO 사용자
+- `MINIO_ROOT_PASSWORD`: MinIO 비밀번호
 - `MINIO_BUCKET_NAME`: MinIO 버킷 이름
-- `SERVER_URL`: 백엔드 서버 URL
 
-**프론트엔드 (frontend/.env)**:
+**프론트엔드 (`frontend/.env`)**:
 
-- `VITE_API_BASE_URL`: 백엔드 API 서버 URL (기본값: http://localhost:4600)
+- `VITE_API_BASE_URL`: 브라우저에서 접근할 백엔드 API 주소
 
 ### 2. 도커 컴포즈로 실행
 
 ```bash
 # 모든 서비스 빌드 및 실행
-docker-compose -f docker-compose.prod.yml up --build
+docker compose --env-file backend/.env --env-file frontend/.env -f docker-compose.prod.yml up --build
 
 # 백그라운드에서 실행
-docker-compose -f docker-compose.prod.yml up -d --build
+docker compose --env-file backend/.env --env-file frontend/.env -f docker-compose.prod.yml up -d --build
 ```
 
 ### 3. 서비스 접속
 
-- **Frontend**: http://localhost:4501
+- **Frontend**: http://localhost:4601
 - **Backend API**: http://localhost:4600
 
 ### 4. 서비스 관리
 
 ```bash
 # 서비스 중지
-docker-compose -f docker-compose.prod.yml down
+docker compose --env-file backend/.env --env-file frontend/.env -f docker-compose.prod.yml down
 
 # 로그 확인
-docker-compose -f docker-compose.prod.yml logs -f
+docker compose --env-file backend/.env --env-file frontend/.env -f docker-compose.prod.yml logs -f
 
 # 특정 서비스 로그 확인
-docker-compose -f docker-compose.prod.yml logs -f frontend
-docker-compose -f docker-compose.prod.yml logs -f backend
+docker compose --env-file backend/.env --env-file frontend/.env -f docker-compose.prod.yml logs -f frontend
+docker compose --env-file backend/.env --env-file frontend/.env -f docker-compose.prod.yml logs -f backend
 
 # 서비스 재시작
-docker-compose -f docker-compose.prod.yml restart
+docker compose --env-file backend/.env --env-file frontend/.env -f docker-compose.prod.yml restart
 
 # 볼륨 삭제 (데이터 초기화)
-docker-compose -f docker-compose.prod.yml down -v
+docker compose --env-file backend/.env --env-file frontend/.env -f docker-compose.prod.yml down -v
 ```
 
 ## 개발 환경에서 실행하기
@@ -126,7 +129,7 @@ docker build -t photo-box-backend ./backend
 
 ```bash
 # Frontend 실행
-docker run -p 4501:80 photo-box-frontend
+docker run -p 4601:80 photo-box-frontend
 
 # Backend 실행
 docker run -p 4600:4600 --env-file backend/.env photo-box-backend
@@ -136,7 +139,7 @@ docker run -p 4600:4600 --env-file backend/.env photo-box-backend
 
 ### 포트 충돌
 
-포트 4600이나 4501이 이미 사용 중인 경우 docker-compose.prod.yml에서 포트를 변경하세요.
+포트 4600이나 4601이 이미 사용 중인 경우 docker-compose.prod.yml에서 포트를 변경하세요.
 
 ### 환경변수 문제
 
